@@ -1,0 +1,21 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Cookbook App
+{% endblock %}
+
+
+{% block stylesheets %}
+	{{ parent() }}
+	<script type="module" crossorigin src="{{ asset('/app/dist/assets/index-BLFk4Jy3.js') }}"></script>
+	<link rel="stylesheet" crossorigin href="{{ asset('/app/dist/assets/index-DRNqXDRU.css') }}">
+	<meta name="theme-color" content="#ffffff">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="manifest" href="{{ asset('/app/dist/manifest.webmanifest') }}">
+	<link rel="icon" href="{{ asset('/app/dist/favicon.ico') }}" sizes="48x48">
+	<link rel="icon" href="{{ asset('/app/dist/favicon.svg') }}" sizes="any" type="image/svg+xml">
+	<link rel="apple-touch-icon" href="{{ asset('/app/dist/apple-touch-icon-180x180.png') }}">
+{% endblock %}
+
+{% block body %}
+	<div id="root"></div>
+{% endblock %}

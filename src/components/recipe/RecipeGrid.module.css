@@ -1,0 +1,109 @@
+/* ==========================================================================
+   RECIPE GRID COMPONENT - CSS MODULE
+   ========================================================================== */
+
+.grid {
+  flex: 1;
+}
+
+.header {
+  margin-bottom: var(--space-4);
+}
+
+.title {
+  margin: 0;
+  color: var(--color-text);
+  font-weight: 600;
+  font-size: var(--font-size-7);
+}
+
+.container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-4);
+}
+
+/* Loading State */
+.loading {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  animation: gradient 2.5s ease-in-out infinite;
+  animation-delay: 0;
+  background-color: var(--accent-2);
+  padding: var(--space-8);
+}
+
+@keyframes gradient {
+  0% {
+    background-color: var(--accent-3);
+  }
+  50% {
+    background-color: var(--iris-7);
+  }
+  100% {
+    background-color: var(--accent-3);
+  }
+}
+
+.loadingSpinner {
+  display: flex;
+  gap: var(--space-1);
+  margin-bottom: var(--space-3);
+}
+
+.loadingDot {
+  animation: loading-bounce 1.4s ease-in-out both infinite;
+  border-radius: 50%;
+  background-color: var(--accent-10);
+  width: .75rem;
+  height: .75rem;
+}
+
+.loadingDot:nth-child(1) { animation-delay: -0.32s; }
+.loadingDot:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes loading-bounce {
+  0%, 80%, 100% {
+    transform: scale(0);
+  }
+  40% {
+    transform: scale(1);
+  }
+}
+
+/* Empty State */
+.empty {
+  display: flex;
+  flex: 1;
+  justify-content: center;
+  align-items: center;
+  padding: var(--space-8);
+}
+
+.emptyState {
+  max-width: 400px;
+  text-align: center;
+}
+
+.emptyIcon {
+  opacity: 0.6;
+  margin-bottom: var(--space-3);
+  font-size: 4rem;
+}
+
+.emptyTitle {
+  margin: 0 0 var(--space-2) 0;
+  color: var(--color-text);
+  font-weight: 600;
+  font-size: var(--font-size-6);
+}
+
+.emptyDescription {
+  margin: 0;
+  color: var(--gray-11);
+  font-size: var(--font-size-3);
+  line-height: 1.6;
+}

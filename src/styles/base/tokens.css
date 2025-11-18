@@ -1,0 +1,142 @@
+/* ==========================================================================
+   VARIABLES BEM & DESIGN TOKENS
+   ========================================================================== */
+
+:root {
+  /* Spacing */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-xxl: 48px;
+
+  /* Typography */
+  --font-family-primary: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-md: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.25rem;
+  --font-size-xxl: 1.5rem;
+  --font-size-3xl: 2rem;
+
+  /* Borders & Radius */
+  --border-radius-sm: 4px;
+  --border-radius-md: 8px;
+  --border-radius-lg: 12px;
+  --border-width: 1px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+
+  /* Transitions */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s ease;
+  --transition-slow: 0.35s ease;
+
+  /* Z-index */
+  --z-dropdown: 1000;
+  --z-modal: 2000;
+  --z-tooltip: 3000;
+  
+  .radix-themes {
+    /* Colors */
+    --color-primary: #646cff;
+    --color-primary-dark: #535bf2;
+    --color-secondary: #1a1a1a;
+    --color-success: #10b981;
+    --color-success-light: #e6fbf4;
+    --color-overlay: var(--black-a6, rgba(0, 0, 0, 0.6));
+    --color-text-muted: var(--gray-9, #9ca3af); 
+    --color-warning: #f59e0b;
+    --color-warning-light: #fef3c7;
+    --color-danger: #ef4444;
+    --color-danger-light: #fee2e2;
+    --color-border: var(--gray-a6, rgba(0, 0, 0, 0.1));
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* --color-surface: var(--gray-1, #1e1e1e); */
+    --color-border: var(--white-a6, rgba(255, 255, 255, 0.1));
+    /*
+    --color-background: #121212;
+    --color-surface: #1e1e1e;
+    --color-text: rgba(255, 255, 255, 0.87); */
+    /* --color-text-muted: rgba(255, 255, 255, 0.6); */
+    /* --color-border: rgba(255, 255, 255, 0.1); */
+    /* --color-secondary: #1e1e1e; */
+    .radix-themes {
+      --color-overlay: var(--white-a6, rgba(0, 0, 0, 0.6));
+    }
+  }
+}
+
+/* ==========================================================================
+   BASE MIXINS (replacements for @mixin)
+   ========================================================================== */
+
+@define-mixin button-base {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--spacing-sm);
+  transition: all var(--transition-normal);
+  cursor: pointer;
+  outline: none;
+  border: var(--border-width) solid transparent;
+  border-radius: var(--border-radius-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-weight: 500;
+  font-size: var(--font-size-md);
+  line-height: 1.5;
+  font-family: var(--font-family-primary);
+  text-decoration: none;
+
+  &:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+@define-mixin card-base {
+  transition: box-shadow var(--transition-normal);
+  box-shadow: var(--shadow-sm);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--border-radius-lg);
+  background-color: var(--color-surface);
+
+  &:hover {
+    box-shadow: var(--shadow-md);
+  }
+}
+
+@define-mixin input-base {
+  transition: border-color var(--transition-normal);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--border-radius-md);
+  background-color: var(--color-surface);
+  padding: var(--spacing-sm) var(--spacing-md);
+  width: 100%;
+  color: var(--color-text);
+  font-size: var(--font-size-md);
+  font-family: var(--font-family-primary);
+
+  &:focus {
+    outline: none;
+    border-color: var(--color-primary);
+  }
+
+  &::placeholder {
+    color: var(--color-text-muted);
+  }
+}

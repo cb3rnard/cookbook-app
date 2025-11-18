@@ -1,0 +1,40 @@
+.label,
+form label {
+  display: block;
+  margin-bottom: var(--spacing-xs);
+  color: var(--color-text);
+  font-weight: 600;
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+}
+
+.rt-SwitchRoot,
+.rt-BaseCheckboxRoot {
+  cursor: pointer;
+}
+
+.rt-SwitchRoot + input + label {
+  margin-bottom: 0;
+  margin-left: var(--spacing-2xs);
+}
+
+.label--required::after {
+  content: " *";
+  color: var(--color-danger);
+}
+
+fieldset {
+  border-width: .0625rem;
+  border-color: var(--color-border);
+  border-radius: var(--border-radius-md);
+}
+
+.input {
+  &--unstyled {
+    box-shadow: none;
+    border: transparent;
+    background: none;
+    background-color: transparent;
+    padding: 0;
+  }
+}

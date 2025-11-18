@@ -1,0 +1,98 @@
+/* ==========================================================================
+   SIDEBAR COMPONENT - CSS MODULE
+   ========================================================================== */
+
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  transform: translateX(-100%);
+  z-index: var(--z-dropdown);
+  transition: transform var(--transition-normal);
+  border-right: 1px solid var(--gray-6);
+  background-color: var(--color-background);
+  width: 300px;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.sidebarOpen {
+  transform: translateX(0);
+}
+
+.header {
+  display: flex;
+  position: sticky;
+  top: 0;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--gray-6);
+  background-color: var(--color-surface);
+  padding: var(--space-4);
+}
+
+.title {
+  margin: 0;
+  color: var(--gray-12);
+  font-weight: 600;
+  font-size: var(--font-size-4);
+}
+
+.close {
+  transition: color var(--transition-fast);
+  cursor: pointer;
+  border: none;
+  border-radius: var(--radius-2);
+  background: none;
+  padding: var(--space-1);
+  color: var(--gray-11);
+  font-size: var(--font-size-8);
+
+  &:hover {
+    background-color: var(--gray-4);
+    color: var(--gray-12);
+  }
+}
+
+.overlay {
+  position: fixed;
+  z-index: calc(var(--z-dropdown) - 1);
+  inset: 0;
+  background-color: var(--black-a8);
+}
+
+/* Filter Groups */
+.filterGroup {
+  margin-bottom: var(--space-4);
+}
+
+.filterLabel {
+  display: block;
+  margin-bottom: var(--space-2);
+  color: var(--gray-12);
+  font-weight: 600;
+  font-size: var(--font-size-2);
+}
+
+.filterOptions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* Desktop styles */
+@media (min-width: 1024px) {
+  .sidebar {
+    position: relative;
+    transform: translateX(0);
+    height: calc(100vh - 73px); /* Adjust based on header height */
+  }
+
+  .close {
+    display: none;
+  }
+
+  .overlay {
+    display: none;
+  }
+}

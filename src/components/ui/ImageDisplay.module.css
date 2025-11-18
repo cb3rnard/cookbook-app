@@ -1,0 +1,16 @@
+/* ==========================================================================
+   IMAGE DISPLAY COMPONENT
+   ========================================================================== */
+
+.container {
+  background-color: var(--color-border);
+  height: 100%;
+  overflow: hidden;
+}
+
+.image {
+  transition: transform var(--transition-normal);
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}

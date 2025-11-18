@@ -1,0 +1,86 @@
+/* ==========================================================================
+   APP HEADER COMPONENT - CSS MODULE
+   ========================================================================== */
+
+.header {
+  z-index: var(--z-dropdown);
+  box-shadow: var(--shadow-2);
+  border-bottom: 1px solid var(--gray-6);
+  background-color: var(--color-surface);
+  width: 100%;
+
+  @media (min-width: 576px) {
+    position: sticky;
+    top: 0;
+  }
+}
+
+.brand {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.title {
+  margin: 0;
+  color: var(--gray-12);
+  font-weight: 700;
+  font-size: var(--font-size-8);
+}
+
+.storage {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--font-size-1);
+}
+
+.storageStatus {
+  border-radius: var(--radius-2);
+  padding: var(--space-1) var(--space-2);
+  font-weight: 500;
+  font-size: var(--font-size-1);
+}
+
+.storageStatusPersistent {
+  border: 1px solid var(--green-7);
+  background-color: var(--green-3);
+  color: var(--green-11);
+}
+
+.storageStatusTemporary {
+  border: 1px solid var(--orange-7);
+  background-color: var(--orange-3);
+  color: var(--orange-11);
+}
+
+.storageUsage {
+  color: var(--gray-11);
+  font-size: var(--font-size-1);
+}
+
+.syncIndicator {
+  animation: rotate 1s linear infinite;
+  border-radius: 50%;
+}
+
+@keyframes rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .title {
+    font-size: var(--font-size-6);
+  }
+  
+  .buttonText {
+    display: none;
+  }
+}

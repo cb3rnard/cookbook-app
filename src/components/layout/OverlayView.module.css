@@ -1,0 +1,55 @@
+/* ==========================================================================
+   OVERLAY VIEW COMPONENT - CSS MODULE
+   ========================================================================== */
+
+.overlay {
+  display: flex;
+  position: fixed;
+  top: 0;
+  left: 0;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: var(--space-4);
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+}
+
+.backdrop {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  backdrop-filter: blur(0.5rem);
+  background: var(--black-a9);
+}
+
+@media (prefers-color-scheme: dark) {
+  .backdrop {
+    background: var(--white-a5);
+  }
+}
+
+.content {
+  position: relative;
+  flex: 1 1 auto;
+  margin: auto;
+  height: auto;
+  max-height: 100%;
+}
+
+.contentStyled {
+  border-radius: var(--radius-4);
+  background-color: var(--color-background);
+}
+
+.contentUnstyled {
+  display: flex;
+  position: absolute;
+  top: 0;
+  left: 0;
+  justify-content: center;
+  align-items: center;
+}

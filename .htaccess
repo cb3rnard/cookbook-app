@@ -1,0 +1,50 @@
+# Disable indexes
+
+# Configuration Apache pour SPA React/Vite
+RewriteEngine On
+
+# Gestion des chunks JS générés par les imports dynamiques
+<FilesMatch "\.(js|mjs|css|woff|woff2|ttf|eot|svg|png|jpg|jpeg|gif|ico|webp)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+</FilesMatch>
+
+# Exception pour le fichier principal (pas de cache agressif)
+<FilesMatch "index\.html$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires 0
+</FilesMatch>
+
+# MIME types pour les modules JS
+AddType application/javascript .js
+AddType application/javascript .mjs
+AddType text/css .css
+
+# Compression
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/plain
+    AddOutputFilterByType DEFLATE text/html
+    AddOutputFilterByType DEFLATE text/xml
+    AddOutputFilterByType DEFLATE text/css
+    AddOutputFilterByType DEFLATE application/xml
+    AddOutputFilterByType DEFLATE application/xhtml+xml
+    AddOutputFilterByType DEFLATE application/rss+xml
+    AddOutputFilterByType DEFLATE application/javascript
+    AddOutputFilterByType DEFLATE application/x-javascript
+    AddOutputFilterByType DEFLATE application/json
+</IfModule>
+
+# Fallback pour SPA : toutes les routes vers index.html
+# CRITIQUE pour que les imports dynamiques fonctionnent
+# Adapté pour base: '/app/dist'
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_URI} !^/app/dist/assets/
+RewriteCond %{REQUEST_URI} ^/app/dist/
+RewriteRule ^app/dist/(.*)$ /app/dist/index.html [L,QSA]
+
+# Sécurité : empêcher l'accès aux fichiers sensibles  
+<FilesMatch "(\.env|\.git|node_modules|package\.json|vite\.config\.)">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>

@@ -1,0 +1,9 @@
+
+.rt-BaseDialogScroll {
+  &.blank {
+    .rt-BaseDialogContent {
+      background: transparent;
+      padding: 0;
+    }
+  }
+}
