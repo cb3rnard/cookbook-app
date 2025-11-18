@@ -1,4 +1,4 @@
-import { Box, Heading, Text } from '@radix-ui/themes';
+import { Box, Flex, Heading, Text } from '@radix-ui/themes';
 import { RecipeCard } from './RecipeCard';
 import styles from './RecipeGrid.module.css';
 
