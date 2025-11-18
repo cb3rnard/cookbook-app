@@ -1,12 +1,6 @@
-/* ==========================================================================
-   IMPORTER INTERFACE COMPONENT - CSS MODULE
-   ========================================================================== */
-
-.interface {
-  width: 100%;
-  height: 100%;
-}
-
+/* =================================================
+   IMPORTER INTERFACE
+   ================================================= */
 .urlForm {
   box-shadow: var(--shadow-3);
   border-radius: var(--radius-4);
@@ -36,11 +30,11 @@
 }
 
 .overlaySuccess {
-  background-color: var(--jade-a8);
+  background-color: var(--jade-a9);
 }
 
 .overlayError {
-  background-color: var(--red-a8);
+  background-color: var(--red-a9);
 }
 
 .stickyFooter {

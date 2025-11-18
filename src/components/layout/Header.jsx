@@ -38,22 +38,22 @@ export function Header({
     <Box asChild className={styles.header}>
       <header>
         <Flex gap="2" align="center" justify="between" py="2" px="3">
-          <Box className={styles.brand}>
-            <Heading className={styles.title}>{title}</Heading>
+          <Flex direction="column" align="start" gap="2">
+            <Heading size="8">{title}</Heading>
 
             {/* Storage info */}
-            <Box className={styles.storage}>
+            <Flex direction="column" align="start" gap="1">
               <Box className={`${styles.storageStatus} ${isPersistent ? styles.storageStatusPersistent : styles.storageStatusTemporary}`}>
                 {isPersistent ? '✅ Stockage persistent' : '⚠️ Stockage temporaire'}
               </Box>
               {storageInfo && (
-                <Text className={styles.storageUsage}>
+                <Text color="gray" size="1">
                   {storageInfo.usagePercentage}% utilisé
                   ({Math.round(storageInfo.usage / 1024 / 1024)}MB / {Math.round(storageInfo.quota / 1024 / 1024)}MB)
                 </Text>
               )}
-            </Box>
-          </Box>
+            </Flex>
+          </Flex>
 
           <Flex direction="column" align="end" gap="2">
             <Box asChild display={{ initial: 'none', sm: 'block' }}>
@@ -65,7 +65,7 @@ export function Header({
                         onClick={handleNewRecipe}
                         size="3"
                       >
-                        <Pencil2Icon /> <Text className={styles.buttonText}>Nouvelle recette</Text>
+                        <Pencil2Icon /> <Text>Nouvelle recette</Text>
                       </Button>
 
                       <Button
@@ -73,7 +73,7 @@ export function Header({
                         size="3"
                         variant="surface"
                       >
-                        <GearIcon /> <Text className={styles.buttonText}>Options</Text>
+                        <GearIcon /> <Text>Options</Text>
                       </Button>
                     </Flex>
                     {isSyncing &&

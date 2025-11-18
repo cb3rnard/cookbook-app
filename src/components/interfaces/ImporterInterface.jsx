@@ -71,7 +71,7 @@ export function ImporterInterface({ view }) {
     switch (view.mode) {
       case 'form':
         return (
-          <Flex height="100%" align="center" justify="center" className={styles.interface}>
+          <Flex width="100%" height="100%" align="center" justify="center">
             <Box maxWidth="20rem" className={styles.urlForm}>
               <Flex direction="column" gap="2">
                 {recipesData ? (

@@ -1,10 +1,9 @@
-/* ==========================================================================
-   APP HEADER COMPONENT - CSS MODULE
-   ========================================================================== */
+/* =================================================
+   APP HEADER
+   ================================================= */
 
 .header {
   z-index: var(--z-dropdown);
-  box-shadow: var(--shadow-2);
   border-bottom: 1px solid var(--gray-6);
   background-color: var(--color-surface);
   width: 100%;
@@ -13,27 +12,6 @@
     position: sticky;
     top: 0;
   }
-}
-
-.brand {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-2);
-}
-
-.title {
-  margin: 0;
-  color: var(--gray-12);
-  font-weight: 700;
-  font-size: var(--font-size-8);
-}
-
-.storage {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  font-size: var(--font-size-1);
 }
 
 .storageStatus {
@@ -55,11 +33,6 @@
   color: var(--orange-11);
 }
 
-.storageUsage {
-  color: var(--gray-11);
-  font-size: var(--font-size-1);
-}
-
 .syncIndicator {
   animation: rotate 1s linear infinite;
   border-radius: 50%;
@@ -71,16 +44,5 @@
   }
   100% {
     transform: rotate(360deg);
-  }
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  .title {
-    font-size: var(--font-size-6);
-  }
-  
-  .buttonText {
-    display: none;
   }
 }

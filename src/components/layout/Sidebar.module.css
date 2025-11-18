@@ -1,13 +1,12 @@
-/* ==========================================================================
-   SIDEBAR COMPONENT - CSS MODULE
-   ========================================================================== */
+/* =================================================
+   SIDEBAR
+   ================================================= */
 
 .sidebar {
   position: fixed;
   top: 0;
   left: 0;
   transform: translateX(-100%);
-  z-index: var(--z-dropdown);
   transition: transform var(--transition-normal);
   border-right: 1px solid var(--gray-6);
   background-color: var(--color-background);
@@ -18,6 +17,7 @@
 
 .sidebarOpen {
   transform: translateX(0);
+  z-index: var(--z-dropdown);
 }
 
 .header {

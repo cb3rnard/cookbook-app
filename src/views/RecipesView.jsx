@@ -81,6 +81,7 @@ export const RecipesView = (props) => {
           recipes={recipes}
           loading={loading}
           emptyMessage={getEmptyMessage()}
+          flexGrow="1"
         />
       </Flex>
 
