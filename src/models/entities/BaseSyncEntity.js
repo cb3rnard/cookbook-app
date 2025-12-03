@@ -24,13 +24,13 @@ export class BaseSyncEntity extends BaseEntity {
    * Marque comme synchronisé
    */
   synced(dateSync = null) {
-    if (!dateSync) {
+    if (!dateSync || typeof dateSync !== "string") {
       dateSync = new Date().toISOString();
     }
     this.isDirty = 0;
-    this.provided.push('isDirty');
+    this.provided.push("isDirty");
     this.lastSyncDate = dateSync;
-    this.provided.push('lastSyncDate');
+    this.provided.push("lastSyncDate");
     return this;
   }
 
@@ -42,11 +42,11 @@ export class BaseSyncEntity extends BaseEntity {
       this.dateAdd = new Date().toISOString();
     }
     this.dateModify = new Date().toISOString();
-    this.provided.push('dateModify');
+    this.provided.push("dateModify");
     this.isDirty = 1;
-    this.provided.push('isDirty');
+    this.provided.push("isDirty");
     this.version = (this.version || 0) + 1;
-    this.provided.push('version');
+    this.provided.push("version");
     return this;
   }
 

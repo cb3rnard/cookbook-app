@@ -1,5 +1,5 @@
-import { LoadingIndicator } from "./LoadingIndicator"
+import { LoadingIndicator } from "./LoadingIndicator";
 
-export const LoadingWrapper = ({ isLoading, children, ...loaderProps }) => {
-  return isLoading ? <LoadingIndicator {...loaderProps} /> : children
-}
+export const LoadingWrapper = ({ isLoading, children, ...props }) => {
+  return isLoading ? <LoadingIndicator {...props} /> : children;
+};

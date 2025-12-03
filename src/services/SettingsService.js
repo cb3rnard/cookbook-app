@@ -1,5 +1,5 @@
-import { database } from '../services/StorageService';
-import { EventBus } from './utils/EventBus';
+import { storageDatabase as database } from "./StorageService";
+import { EventBus } from "./utils/EventBus";
 
 export class SettingsService {
   static async getSetting(key) {
@@ -9,7 +9,7 @@ export class SettingsService {
   static async setSetting(key, value) {
     await database.options.put({ uuid: key, key, value });
     const eventBus = EventBus.getInstance();
-    eventBus.emit('setting:updated', { key, value });
+    eventBus.emit("setting:updated", { key, value });
   }
 
   static async getSettings() {
@@ -22,25 +22,25 @@ export class SettingsService {
 
   static async updateSettings(newSettings) {
     const promises = Object.entries(newSettings).map(([key, value]) =>
-      database.options.put({ uuid: key, key, value })
+      database.options.put({ uuid: key, key, value }),
     );
     await Promise.all(promises);
     const eventBus = EventBus.getInstance();
-    eventBus.emit('settings:updated', newSettings);
+    eventBus.emit("settings:updated", newSettings);
     Object.entries(newSettings).forEach(([key, value]) => {
-      eventBus.emit('setting:updated', { key, value });
+      eventBus.emit("setting:updated", { key, value });
     });
   }
 
   static async deleteSetting(key) {
     await database.options.delete(key);
     const eventBus = EventBus.getInstance();
-    eventBus.emit('setting:deleted', key);
+    eventBus.emit("setting:deleted", key);
   }
 
   static async resetSettings() {
     await database.options.clear();
     const eventBus = EventBus.getInstance();
-    eventBus.emit('settings:reset');
+    eventBus.emit("settings:reset");
   }
 }

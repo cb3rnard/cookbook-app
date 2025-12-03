@@ -1,18 +1,14 @@
-import { GearIcon, Pencil2Icon, UpdateIcon } from '@radix-ui/react-icons';
-import { Box, Button, Flex, Heading, Text } from '@radix-ui/themes';
-import { useEffect, useState } from 'react';
-import { useSync } from '../../contexts/SyncContext';
-import { useView } from '../../contexts/ViewContext';
-import { SettingsService } from '../../services';
-import { DebugControls } from '../debug/DebugControls';
-import styles from './Header.module.css';
+import { GearIcon, Pencil2Icon, UpdateIcon } from "@radix-ui/react-icons";
+import { Box, Button, Flex, Heading, Text } from "@radix-ui/themes";
+import { useEffect, useState } from "react";
+import { useSync } from "../../contexts/SyncContext";
+import { useView } from "../../contexts/ViewContext";
+import { SettingsService } from "../../services";
+import { DebugControls } from "../debug/DebugControls";
+import styles from "./Header.module.css";
 
-export function Header({
-  title = "Cookbook",
-  storageInfo,
-  isPersistent
-}) {
-  const { isSyncing } = useSync();
+export function Header({ title = "Cookbook", storageInfo, isPersistent }) {
+  const { syncing } = useSync();
   const { openRecipeForm, openSettings } = useView();
   const [showDebugControls, setShowDebugControls] = useState(false);
 
@@ -27,12 +23,11 @@ export function Header({
         const settings = await SettingsService.getSettings();
         setShowDebugControls(settings.showDebugControls || false);
       } catch (error) {
-        console.error('Erreur chargement showDebugControls:', error);
+        console.error("Erreur chargement showDebugControls:", error);
       }
     };
     loadDebugControlsSetting();
   }, []);
-
 
   return (
     <Box asChild className={styles.header}>
@@ -43,42 +38,40 @@ export function Header({
 
             {/* Storage info */}
             <Flex direction="column" align="start" gap="1">
-              <Box className={`${styles.storageStatus} ${isPersistent ? styles.storageStatusPersistent : styles.storageStatusTemporary}`}>
-                {isPersistent ? '✅ Stockage persistent' : '⚠️ Stockage temporaire'}
+              <Box
+                className={`${styles.storageStatus} ${isPersistent ? styles.storageStatusPersistent : styles.storageStatusTemporary}`}
+              >
+                {isPersistent
+                  ? "✅ Stockage persistent"
+                  : "⚠️ Stockage temporaire"}
               </Box>
               {storageInfo && (
                 <Text color="gray" size="1">
-                  {storageInfo.usagePercentage}% utilisé
-                  ({Math.round(storageInfo.usage / 1024 / 1024)}MB / {Math.round(storageInfo.quota / 1024 / 1024)}MB)
+                  {storageInfo.usagePercentage}% utilisé (
+                  {Math.round(storageInfo.usage / 1024 / 1024)}MB /{" "}
+                  {Math.round(storageInfo.quota / 1024 / 1024)}MB)
                 </Text>
               )}
             </Flex>
           </Flex>
 
           <Flex direction="column" align="end" gap="2">
-            <Box asChild display={{ initial: 'none', sm: 'block' }}>
+            <Box asChild display={{ initial: "none", sm: "block" }}>
               <nav>
                 <Flex direction="column" align="end" gap="2">
                   <Flex justify="end" align="center" gap="3">
                     <Flex justify="end" align="center" gap="1" wrap="wrap">
-                      <Button
-                        onClick={handleNewRecipe}
-                        size="3"
-                      >
+                      <Button onClick={handleNewRecipe} size="3">
                         <Pencil2Icon /> <Text>Nouvelle recette</Text>
                       </Button>
 
-                      <Button
-                        onClick={openSettings}
-                        size="3"
-                        variant="surface"
-                      >
+                      <Button onClick={openSettings} size="3" variant="surface">
                         <GearIcon /> <Text>Options</Text>
                       </Button>
                     </Flex>
-                    {isSyncing &&
+                    {syncing && (
                       <UpdateIcon className={styles.syncIndicator} size="3" />
-                    }
+                    )}
                   </Flex>
                 </Flex>
               </nav>
@@ -96,4 +89,4 @@ export function Header({
       </header>
     </Box>
   );
-};
+}

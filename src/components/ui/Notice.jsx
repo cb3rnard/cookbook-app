@@ -1,25 +1,24 @@
-import { CheckCircledIcon, CrossCircledIcon, ExclamationTriangleIcon } from '@radix-ui/react-icons';
-import { Button, Callout, Flex, Heading } from '@radix-ui/themes';
-import { useState } from 'react';
-import styles from './Notice.module.css';
+import {
+  CheckCircledIcon,
+  CrossCircledIcon,
+  ExclamationTriangleIcon,
+} from "@radix-ui/react-icons";
+import { Box, Button, Callout, Flex, Heading } from "@radix-ui/themes";
+import { useState } from "react";
+import styles from "./Notice.module.css";
 
-export function Notice(props) {
-  const {
-    id = null,
-    type = 'info',
-    IconComponent = null,
-    title = '',
-    message = '',
-    variant = 'soft',
-    opaque = false,
-    highContrast = false,
-    dismissible = false,
-    asAlert = false,
-    size = '1',
-    style = {},
-    attrs = {},
-  } = props;
-  const children = props.children || null;
+export function Notice({
+  id = null,
+  type = "info",
+  IconComponent = null,
+  title = "",
+  message = "",
+  opaque = false,
+  dismissible = false,
+  asAlert = false,
+  children,
+  ...props
+}) {
   const [dismissed, setDismissed] = useState(false);
 
   // Auto assign default icons based on type if no IconComponent is provided
@@ -28,36 +27,37 @@ export function Notice(props) {
     warning: ExclamationTriangleIcon,
     success: CheckCircledIcon,
     info: null,
-    neutral: null
+    neutral: null,
   };
   const IconToRender = IconComponent || defaultIcons[type] || null;
   const IconComponentFinal = IconToRender ? IconToRender : null;
-  const opaqueStyle = (opaque && type) ? styles[`${type}-opaque`] : null;
+  const opaqueStyle = opaque && type ? styles[`${type}-opaque`] : null;
 
   // Mapper les types vers les couleurs Radix
   const getRadixColor = (type) => {
     switch (type) {
-      case 'error': return 'red';
-      case 'warning': return 'orange';
-      case 'success': return 'green';
-      case 'info': return 'blue';
-      case 'neutral': return 'gray';
-      default: return 'gray';
+      case "error":
+        return "red";
+      case "warning":
+        return "orange";
+      case "success":
+        return "green";
+      case "info":
+        return "blue";
+      case "neutral":
+        return "gray";
+      default:
+        return "gray";
     }
   };
 
-  return (
-    !dismissed ? (
+  return !dismissed ? (
+    <Box asChild {...props}>
       <Callout.Root
         key={id}
         color={getRadixColor(type)}
-        variant={variant}
-        highContrast={highContrast}
-        size={size}
         className={opaqueStyle}
-        role={asAlert ? 'alert' : 'region'}
-        style={style}
-        {...attrs}
+        role={asAlert ? "alert" : "region"}
       >
         {dismissible && (
           <Flex justify="end">
@@ -65,31 +65,25 @@ export function Notice(props) {
               variant="ghost"
               size="1"
               onClick={() => setDismissed(true)}
-              style={{ marginLeft: 'auto' }}
+              style={{ marginLeft: "auto" }}
             >
               ×
             </Button>
           </Flex>
         )}
 
-        {
-          (title || IconComponentFinal) &&
+        {(title || IconComponentFinal) && (
           <Flex asChild align="center" gap="2">
             <Heading as="div" size="2">
               {IconComponentFinal && <IconComponentFinal />}
               {title && <strong>{title}</strong>}
             </Heading>
           </Flex>
-        }
+        )}
 
-        {
-          message &&
-          <Callout.Text>
-            {message}
-          </Callout.Text>
-        }
+        {message && <Callout.Text>{message}</Callout.Text>}
         {children}
-      </Callout.Root >
-    ) : null
-  );
+      </Callout.Root>
+    </Box>
+  ) : null;
 }

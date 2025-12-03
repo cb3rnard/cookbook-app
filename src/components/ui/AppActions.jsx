@@ -1,27 +1,33 @@
-import { GearIcon, Link1Icon, MagnifyingGlassIcon, Pencil2Icon, PlusIcon } from '@radix-ui/react-icons'
-import { Box, Flex, IconButton } from '@radix-ui/themes'
-import { useCallback, useEffect, useState } from 'react'
-import { useApi } from '../../contexts'
-import { useView } from '../../contexts/ViewContext'
+import {
+  GearIcon,
+  Link1Icon,
+  MagnifyingGlassIcon,
+  Pencil2Icon,
+  PlusIcon,
+} from "@radix-ui/react-icons";
+import { Box, Flex, IconButton } from "@radix-ui/themes";
+import { useCallback, useEffect, useState } from "react";
+import { useApi } from "../../contexts";
+import { useView } from "../../contexts/ViewContext";
 
 export function AppActions({ handleToggleSidebar }) {
   const { openRecipeForm, openUrlImport, openSettings } = useView();
   const [createOptionsOpen, setCreateOptionsOpen] = useState(false);
   const { connection } = useApi();
-  const { isAuthenticated } = connection;
+  const { authenticated } = connection;
   const { toggleSidebar } = useView();
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (!event.target.closest('.app__actions-create-options')) {
+      if (!event.target.closest(".app__actions-create-options")) {
         setCreateOptionsOpen(false);
       }
     };
     if (createOptionsOpen) {
-      document.addEventListener('click', handleClickOutside);
+      document.addEventListener("click", handleClickOutside);
     } else {
-      document.removeEventListener('click', handleClickOutside);
-    };
+      document.removeEventListener("click", handleClickOutside);
+    }
   }, [createOptionsOpen]);
 
   const handleNewRecipe = () => {
@@ -30,31 +36,41 @@ export function AppActions({ handleToggleSidebar }) {
 
   const handleImportRecipeFromUrl = () => {
     openUrlImport();
-  }
+  };
 
-  const handleAddRecipe = useCallback((e) => {
-    e.stopPropagation();
-    if (isAuthenticated) {
-      setCreateOptionsOpen(!createOptionsOpen);
-    } else {
-      handleNewRecipe();
-    }
-  }, [createOptionsOpen, isAuthenticated]);
+  const handleAddRecipe = useCallback(
+    (e) => {
+      e.stopPropagation();
+      if (authenticated) {
+        setCreateOptionsOpen(!createOptionsOpen);
+      } else {
+        handleNewRecipe();
+      }
+    },
+    [createOptionsOpen, authenticated],
+  );
 
   return (
-    <Flex className="app__actions" gap="3" p="2" style={{
-      backgroundColor: 'var(--iris-a5)', borderRadius: '99999px'
-    }} >
+    <Flex
+      className="app__actions"
+      gap="3"
+      p="2"
+      style={{
+        backgroundColor: "var(--iris-a5)",
+        borderRadius: "99999px",
+      }}
+    >
       {/* Création de recette */}
       <Flex direction={"column"} align="center">
-        {(isAuthenticated && createOptionsOpen) && (
-          <Flex direction="column" gap="1" position="absolute" bottom="calc(100% + .25rem)">
+        {authenticated && createOptionsOpen && (
+          <Flex
+            direction="column"
+            gap="1"
+            position="absolute"
+            bottom="calc(100% + .25rem)"
+          >
             {/* Création */}
-            <IconButton
-              onClick={handleNewRecipe}
-              size="4"
-              radius="full"
-            >
+            <IconButton onClick={handleNewRecipe} size="4" radius="full">
               <Pencil2Icon />
             </IconButton>
             {/* Import web */}
@@ -67,22 +83,14 @@ export function AppActions({ handleToggleSidebar }) {
             </IconButton>
           </Flex>
         )}
-        <IconButton
-          onClick={handleAddRecipe}
-          size="4"
-          radius="full"
-        >
+        <IconButton onClick={handleAddRecipe} size="4" radius="full">
           <PlusIcon />
         </IconButton>
       </Flex>
 
       {/* Sidebar filtres & recherches (mobile) */}
-      <Box asChild display={{ initial: 'block', sm: 'none' }}>
-        <IconButton
-          onClick={toggleSidebar}
-          size="4"
-          radius="full"
-        >
+      <Box asChild display={{ initial: "block", sm: "none" }}>
+        <IconButton onClick={toggleSidebar} size="4" radius="full">
           <MagnifyingGlassIcon />
         </IconButton>
       </Box>

@@ -1,308 +1,261 @@
-import { DebugService } from '../DebugService.js';
+import { DebugService } from "../DebugService.js";
 
-/**
- * Service dédié à la gestion des conflits de synchronisation
- * Responsabilité: Détection et résolution des conflits entre entités locales et distantes
- */
 export class SyncConflictsService {
+  static syncStore = null;
+  /**
+   * Détecte les conflits entre UUIDs locaux et distants
+   * @param {Object} localDirtyUuids - UUIDs dirty locaux par type
+   * @param {Object} remoteDirtyUuids - UUIDs dirty distants par type
+   * @returns {Object} Conflits détectés par type d'entité
+   */
+  static detectConflictsFromUuids(localDirtyUuids, remoteDirtyUuids) {
+    const conflicts = {
+      recipes: [],
+      ingredients: [],
+      types: [],
+      hasConflicts: false,
+    };
 
-    /**
-     * Détecte les conflits entre UUIDs locaux et distants
-     * @param {Object} localDirtyUuids - UUIDs dirty locaux par type
-     * @param {Object} remoteDirtyUuids - UUIDs dirty distants par type
-     * @returns {Object} Conflits détectés par type d'entité
-     */
-    static detectConflicts(localDirtyUuids, remoteDirtyUuids) {
-        const conflicts = {
-            recipes: [],
-            ingredients: [],
-            types: [],
-            hasConflicts: false
-        };
+    ["recipes", "ingredients", "types"].forEach((entityType) => {
+      const localEntities = localDirtyUuids[entityType] || [];
+      const remoteEntities = remoteDirtyUuids[entityType] || [];
 
-        ['recipes', 'ingredients', 'types'].forEach(entityType => {
-            const localEntities = localDirtyUuids[entityType] || [];
-            const remoteEntities = remoteDirtyUuids[entityType] || [];
+      // Trouver les UUIDs en conflit (présents dans les deux listes)
+      const conflictUuids = localEntities.filter((localUuid) =>
+        remoteEntities.includes(localUuid),
+      );
 
-            // Trouver les UUIDs en conflit (présents dans les deux listes)
-            const conflictUuids = localEntities.filter(localUuid =>
-                remoteEntities.includes(localUuid)
-            );
+      conflicts[entityType] = conflictUuids.map((uuid) => ({
+        uuid,
+        local: uuid,
+        remote: uuid,
+        entityType,
+        conflictType: "version",
+      }));
+    });
 
-            conflicts[entityType] = conflictUuids.map(uuid => ({
-                uuid,
-                local: uuid,
-                remote: uuid,
-                entityType,
-                conflictType: 'version'
-            }));
-        });
+    conflicts.hasConflicts = Object.values(conflicts).some(
+      (entityConflicts) =>
+        Array.isArray(entityConflicts) && entityConflicts.length > 0,
+    );
 
-        conflicts.hasConflicts = Object.values(conflicts)
-            .some(entityConflicts => Array.isArray(entityConflicts) && entityConflicts.length > 0);
+    return conflicts;
+  }
 
-        return conflicts;
+  static detectConflicts(endpoint, toRemote, toLocal, strategy, syncStore) {
+    this.syncStore = syncStore;
+    let resolution = {
+      toRemote: toRemote, // Entités à envoyer au serveur
+      toLocal: toLocal, // Entités à appliquer localement
+    };
+    const versionResolution = this.detectVersionConflicts(
+      endpoint,
+      toRemote,
+      toLocal,
+    );
+    resolution = versionResolution;
+    const nameResolution = this.detectNameConflicts(
+      endpoint,
+      resolution.toRemote,
+      resolution.toLocal,
+      strategy,
+    );
+    return {
+      ...nameResolution,
+      conflicts: [
+        ...(resolution.conflicts || []),
+        ...(nameResolution.conflicts || []),
+      ],
+    };
+  }
+
+  /**
+   * Résout les conflits de version selon une stratégie
+   * @param {Array} toRemote - Entités locales
+   * @param {Array} toLocal - Entités distantes
+   * @param {string} strategy - Stratégie de résolution ('LAST_WRITE_WINS', 'LOCAL_WINS', 'REMOTE_WINS')
+   * @returns {Object} Résolution des conflits
+   */
+  static detectVersionConflicts(
+    endpoint = "",
+    toRemote,
+    toLocal,
+    strategy = "LAST_WRITE_WINS",
+  ) {
+    const resolution = {
+      toLocal: [], // Entités à appliquer localement
+      toRemote: [], // Entités à envoyer au serveur
+      conflicts: [], // Conflits non résolus
+    };
+
+    DebugService.warn(
+      [`Starting conflict resolution with strategy: ${strategy}`],
+      "sync",
+    );
+
+    // Processing local entities
+    toRemote.forEach((localEntity) => {
+      const remoteEntity = toLocal.find((re) => re.uuid === localEntity.uuid);
+      if (!remoteEntity && localEntity?.isDirty) {
+        // No remote entity, local is dirty → toRemote
+        resolution.toRemote.push(localEntity);
+      } else if (remoteEntity) {
+        // Conflict detected
+        DebugService.warn(
+          [`Applying ${strategy} strategy for UUID: ${localEntity.uuid}`],
+          "sync",
+        );
+        const resolved = this._applyConflictStrategy(
+          localEntity,
+          remoteEntity,
+          strategy,
+        );
+
+        let keepedUuid = "";
+        if (resolved.winner === "local") {
+          keepedUuid = localEntity.uuid;
+          resolution.toRemote.push(localEntity);
+        } else if (resolved.winner === "remote") {
+          keepedUuid = remoteEntity.uuid;
+          resolution.toLocal.push(remoteEntity);
+        } else {
+          resolution.conflicts.push({
+            local: localEntity,
+            remote: remoteEntity,
+            reason: resolved.reason,
+          });
+        }
+        this.syncStore?.addOperationConflict(
+          "version",
+          endpoint,
+          resolved.winner,
+          keepedUuid,
+        );
+      }
+    });
+
+    // Processing remote entities
+    toLocal.forEach((remoteEntity) => {
+      const localEntity = toRemote.find((le) => le.uuid === remoteEntity.uuid);
+      if (!localEntity) {
+        resolution.toLocal.push(remoteEntity);
+      }
+    });
+
+    return resolution;
+  }
+
+  /**
+   * Excludes from export entities which will be overwritten by new remote with same name
+   * @param {string} endpoint
+   * @param {Array} toRemote
+   * @param {Array} toLocal
+   */
+  static detectNameConflicts(endpoint = "", toRemote, toLocal) {
+    const resolution = {
+      toLocal: toLocal,
+      toRemote: [],
+      conflicts: [],
+    };
+    if (!["ingredients", "types"].includes(endpoint)) {
+      // Name conflicts only for ingredients and types
+      resolution.toRemote = toRemote;
+      return resolution;
     }
+    // Add remaining entities
+    for (const localEntity of toRemote) {
+      const conflictingRemoteEntity = toLocal.find(
+        (remoteEntity) =>
+          localEntity.name?.toLowerCase() ===
+            remoteEntity.name?.toLowerCase() &&
+          localEntity.uuid !== remoteEntity.uuid,
+      );
+      if (!conflictingRemoteEntity) {
+        resolution.toRemote.push(localEntity);
+      }
+    }
+    return resolution;
+  }
 
-    /**
-     * Détecte les conflits de noms (pour types et ingrédients)
-     * @param {Array} localEntities - Entités locales
-     * @param {Array} remoteEntities - Entités distantes
-     * @param {string} entityType - Type d'entité (types, ingredients)
-     * @returns {Array} Conflits de noms détectés
-     */
-    static detectNameConflicts(localEntities, remoteEntities, entityType) {
-        if (!['types', 'ingredients'].includes(entityType)) {
-            return [];
+  /**
+   * Resolves name conflict by always deleting local conflicting entity
+   * @param {Object} repository - Entity repository
+   * @param {Object} entityToImport - Local entity
+   */
+  static async resolveNameImportConflict(
+    endpoint,
+    recipesRepository,
+    entityToImport,
+  ) {
+    if (["ingredients", "types"].includes(endpoint)) {
+      return { replacedCount: 0, relatedRecipesUuids: [] };
+    }
+    // Check for name conflict
+    const conflictingLocal = await repository.getBy(
+      "name",
+      entityToImport.name,
+    );
+    if (conflictingLocal && conflictingLocal.uuid !== entityToImport.uuid) {
+      return await recipesRepository.overwriteRecipesRelation(
+        conflictingLocal.uuid,
+        entityToImport.uuid,
+        endpoint,
+        true,
+      );
+    }
+    return { replacedCount: 0, relatedRecipesUuids: [] };
+  }
+
+  /**
+   * Applique une stratégie de résolution de conflit
+   * @private
+   */
+  static _applyConflictStrategy(localEntity, remoteEntity, strategy) {
+    switch (strategy) {
+      case "LOCAL_WINS":
+        return { winner: "local", reason: "Local wins strategy" };
+
+      case "REMOTE_WINS":
+        return { winner: "remote", reason: "Remote wins strategy" };
+
+      case "LAST_WRITE_WINS":
+      default:
+        if (!localEntity.isDirty) {
+          return { winner: "remote", reason: "Local entity is not dirty" };
         }
 
-        const nameConflicts = [];
-
-        localEntities.forEach(localEntity => {
-            const remoteConflict = remoteEntities.find(remoteEntity =>
-                remoteEntity.name?.toLowerCase() === localEntity.name?.toLowerCase() &&
-                remoteEntity.uuid !== localEntity.uuid
-            );
-
-            if (remoteConflict) {
-                nameConflicts.push({
-                    local: localEntity,
-                    remote: remoteConflict,
-                    entityType,
-                    conflictType: 'name',
-                    conflictField: 'name',
-                    conflictValue: localEntity.name
-                });
-            }
-        });
-
-        return nameConflicts;
-    }
-
-    /**
-     * Résout les conflits de version selon une stratégie
-     * @param {Array} localEntities - Entités locales
-     * @param {Array} remoteEntities - Entités distantes
-     * @param {string} strategy - Stratégie de résolution ('LAST_WRITE_WINS', 'LOCAL_WINS', 'REMOTE_WINS')
-     * @returns {Object} Résolution des conflits
-     */
-    static resolveVersionConflicts(localEntities, remoteEntities, strategy = 'LAST_WRITE_WINS') {
-
-        const resolution = {
-            toLocal: [], // Entités à appliquer localement
-            toRemote: [], // Entités à envoyer au serveur
-            conflicts: [] // Conflits non résolus
-        };
-
-        DebugService.warn([`Starting conflict resolution with strategy: ${strategy}`], 'sync');
-        // Créer des maps pour un accès rapide
-        const localMap = new Map(localEntities.map(e => [e.uuid, e]));
-        const remoteMap = new Map(remoteEntities.map(e => [e.uuid, e]));
-
-        // Traiter les entités locales
-        localEntities.forEach(localEntity => {
-            const remoteEntity = remoteMap.get(localEntity.uuid);
-
-            if (!remoteEntity) {
-                // Entité locale uniquement → à envoyer au serveur
-                resolution.toRemote.push(localEntity);
-            } else {
-                // Conflit de version → appliquer la stratégie
-                DebugService.warn([`Applying ${strategy} strategy for UUID: ${localEntity.uuid}`], 'sync');
-                const resolved = this._applyConflictStrategy(localEntity, remoteEntity, strategy);
-
-                if (resolved.winner === 'local') {
-                    resolution.toRemote.push(localEntity);
-                } else if (resolved.winner === 'remote') {
-                    resolution.toLocal.push(remoteEntity);
-                } else {
-                    resolution.conflicts.push({
-                        local: localEntity,
-                        remote: remoteEntity,
-                        reason: resolved.reason
-                    });
-                }
-            }
-        });
-
-        // Traiter les entités distantes uniquement
-        remoteEntities.forEach(remoteEntity => {
-            if (!localMap.has(remoteEntity.uuid)) {
-                // Entité distante uniquement → à appliquer localement
-                resolution.toLocal.push(remoteEntity);
-            }
-        });
-
-        return resolution;
-    }
-
-    /**
-     * Applique une stratégie de résolution de conflit
-     * @private
-     */
-    static _applyConflictStrategy(localEntity, remoteEntity, strategy) {
-        switch (strategy) {
-            case 'LOCAL_WINS':
-                return { winner: 'local', reason: 'Local wins strategy' };
-
-            case 'REMOTE_WINS':
-                return { winner: 'remote', reason: 'Remote wins strategy' };
-
-            case 'LAST_WRITE_WINS':
-            default:
-                const localDate = new Date(localEntity.dateModify || localEntity.dateAdd || 0);
-                const remoteDate = new Date(remoteEntity.dateModify || remoteEntity.dateAdd || 0);
-                DebugService.warn(`Comparing local date ${localDate} with remote date ${remoteDate} for entity UUID ${localEntity.uuid}`);
-
-                if (localDate > remoteDate) {
-                    return { winner: 'local', reason: 'Local entity is newer' };
-                } else if (remoteDate > localDate) {
-                    return { winner: 'remote', reason: 'Remote entity is newer' };
-                } else {
-                    // Dates identiques → utiliser la version
-                    const localVersion = localEntity.version || 0;
-                    const remoteVersion = remoteEntity.version || 0;
-
-                    if (localVersion > remoteVersion) {
-                        return { winner: 'local', reason: 'Local version is higher' };
-                    } else if (remoteVersion > localVersion) {
-                        return { winner: 'remote', reason: 'Remote version is higher' };
-                    } else {
-                        return { winner: 'none', reason: 'Identical dates and versions' };
-                    }
-                }
+        const localDate = new Date(
+          localEntity.dateModify || localEntity.dateAdd || 0,
+        );
+        const remoteDate = new Date(
+          remoteEntity.dateModify || remoteEntity.dateAdd || 0,
+        );
+        DebugService.warn(
+          `Comparing local date ${localDate} with remote date ${remoteDate} for entity UUID ${localEntity.uuid}`,
+        );
+        if (localDate > remoteDate) {
+          return { winner: "local", reason: "Local entity is newer" };
         }
-    }
-
-    /**
-     * Résout les conflits de noms pour éviter les doublons
-     * Remplace l'entité locale par la distante et met à jour les références
-     * @param {Array} entitiesToImport - Entités à importer
-     * @param {Object} repository - Repository de l'entité
-     * @returns {Promise<Array>} Entités validées pour l'import
-     */
-    static async resolveNameConflicts(entitiesToImport, repository) {
-        if (!entitiesToImport.length) return [];
-
-
-        const validatedEntities = [];
-        const importNames = entitiesToImport.map(e => e.name.toLowerCase());
-
-        // Récupérer toutes les entités locales avec des noms conflictuels
-        const existingEntities = await repository.getAllBy('name', importNames);
-
-        for (const entityToImport of entitiesToImport) {
-            const conflictingEntity = existingEntities.find(
-                e => e.name.toLowerCase() === entityToImport.name.toLowerCase() &&
-                    e.uuid !== entityToImport.uuid
-            );
-
-            if (!conflictingEntity) {
-                validatedEntities.push(entityToImport);
-                continue;
-            }
-
-            try {
-                // Mettre à jour toutes les références vers l'entité locale conflictuelle
-                const updatedReferences = await this.updateEntityReferences(
-                    conflictingEntity.uuid,
-                    entityToImport.uuid,
-                    entityType
-                );
-
-                // Supprimer l'entité locale conflictuelle
-                await repository.delete(conflictingEntity.uuid);
-
-                validatedEntities.push(entityToImport);
-
-            } catch (error) {
-                // En cas d'erreur, on garde l'entité locale
-            }
+        if (remoteDate > localDate) {
+          return { winner: "remote", reason: "Remote entity is newer" };
         }
 
-        return validatedEntities;
-    }
-
-    /**
-     * Met à jour toutes les références d'une entité dans les relations
-     * @param {string} oldUuid - UUID de l'ancienne entité
-     * @param {string} newUuid - UUID de la nouvelle entité
-     * @param {string} endpoint - Type d'entité (ingredients, types)
-     * @returns {Promise<number>} Nombre de références mises à jour
-     */
-    static async updateEntityReferences(oldUuid, newUuid, endpoint) {
-        if (!['ingredients', 'types'].includes(endpoint)) {
-            throw new Error(`Cannot update references for entity type: ${endpoint}. Only "ingredients" and "types" are supported.`);
+        const dateReceived = new Date(remoteEntity.dateReceived);
+        const lastSyncDate = new Date(localEntity.lastSyncDate);
+        if (dateReceived === lastSyncDate) {
+          return { winner: "none", reason: "No changes since last sync" };
         }
+        // Dates identiques → utiliser la version
+        const localVersion = localEntity.version || 0;
+        const remoteVersion = remoteEntity.version || 0;
 
-        // Import dynamique de la base de données pour éviter les dépendances circulaires
-        const { default: database } = await import('../StorageService.js');
-        let updatedCount = 0;
-
-        try {
-
-        } catch (error) {
-            throw error;
+        if (localVersion > remoteVersion) {
+          return { winner: "local", reason: "Local version is higher" };
+        } else if (remoteVersion > localVersion) {
+          return { winner: "remote", reason: "Remote version is higher" };
+        } else {
+          return { winner: "none", reason: "Identical dates and versions" };
         }
     }
-
-    /**
-     * Valide une stratégie de résolution
-     * @param {string} strategy - Stratégie à valider
-     * @returns {boolean} True si la stratégie est valide
-     */
-    static isValidStrategy(strategy) {
-        return Object.values(this.STRATEGIES).includes(strategy);
-    }
-
-    /**
-     * Obtient des statistiques sur les conflits
-     * @param {Object} conflicts - Conflits détectés
-     * @returns {Object} Statistiques des conflits
-     */
-    static getConflictStats(conflicts) {
-        if (!conflicts) {
-            return {
-                totalConflicts: 0,
-                byType: { recipes: 0, ingredients: 0, types: 0 },
-                hasConflicts: false
-            };
-        }
-
-        const stats = {
-            totalConflicts: 0,
-            byType: { recipes: 0, ingredients: 0, types: 0 },
-            hasConflicts: conflicts.hasConflicts || false
-        };
-
-        ['recipes', 'ingredients', 'types'].forEach(entityType => {
-            const typeConflicts = conflicts[entityType] || [];
-            stats.byType[entityType] = typeConflicts.length;
-            stats.totalConflicts += typeConflicts.length;
-        });
-
-        return stats;
-    }
-
-    /**
-     * Stratégies de résolution disponibles
-     */
-    static get STRATEGIES() {
-        return {
-            LAST_WRITE_WINS: 'LAST_WRITE_WINS',
-            LOCAL_WINS: 'LOCAL_WINS',
-            REMOTE_WINS: 'REMOTE_WINS'
-        };
-    }
-
-    /**
-     * Types de conflits supportés
-     */
-    static get CONFLICT_TYPES() {
-        return {
-            VERSION: 'version',
-            NAME: 'name',
-            DELETED: 'deleted'
-        };
-    }
+  }
 }

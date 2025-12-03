@@ -2,33 +2,36 @@
  * EventBus simple pour découpler les services
  */
 export class EventBus {
-    static instance = null;
+  static instance = null;
 
-    static getInstance() {
-        if (!EventBus.instance) {
-            EventBus.instance = new EventBus();
-        }
-        return EventBus.instance;
+  static getInstance() {
+    if (!EventBus.instance) {
+      EventBus.instance = new EventBus();
     }
+    return EventBus.instance;
+  }
 
-    constructor() {
-        this.listeners = {};
-    }
+  constructor() {
+    this.listeners = {};
+    this.filters = {};
+  }
 
-    on(event, callback) {
-        if (!this.listeners[event]) {
-            this.listeners[event] = [];
-        }
-        this.listeners[event].push(callback);
+  on(event, callback) {
+    if (!this.listeners[event]) {
+      this.listeners[event] = [];
     }
+    this.listeners[event].push(callback);
+  }
 
-    off(event, callback) {
-        if (!this.listeners[event]) return;
-        this.listeners[event] = this.listeners[event].filter(cb => cb !== callback);
-    }
+  off(event, callback) {
+    if (!this.listeners[event]) return;
+    this.listeners[event] = this.listeners[event].filter(
+      (cb) => cb !== callback,
+    );
+  }
 
-    emit(event, data) {
-        if (!this.listeners[event]) return;
-        this.listeners[event].forEach(callback => callback(data));
-    }
+  emit(event, data = {}) {
+    if (!this.listeners[event]) return;
+    this.listeners[event].forEach((callback) => callback(data));
+  }
 }

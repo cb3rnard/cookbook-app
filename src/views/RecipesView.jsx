@@ -1,25 +1,21 @@
-import { Box, Flex } from '@radix-ui/themes';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Sidebar } from '../components/layout/Sidebar';
-import { RecipeGrid } from '../components/recipe/RecipeGrid';
-import { AppActions } from '../components/ui/AppActions';
-import { useView } from '../contexts';
-import { useRecipes } from '../contexts/RecipesContext';
-import { useDebug } from '../hooks/useDebug';
+import { Box, Flex } from "@radix-ui/themes";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Sidebar } from "../components/layout/Sidebar";
+import { RecipeGrid } from "../components/recipe/RecipeGrid";
+import { AppActions } from "../components/ui/AppActions";
+import { useView } from "../contexts";
+import { useRecipes } from "../contexts/RecipesContext";
+import { useDebug } from "../hooks/useDebug";
 
 export const RecipesView = (props) => {
-  const {
-    needsRefresh,
-    recipes,
-    getRecipes,
-  } = useRecipes();
+  const { needsRefresh, recipes, getRecipes } = useRecipes();
   const [filters, setFilters] = useState({});
   const { uiState } = useView();
   const { sidebarOpen } = uiState;
 
   const [loading, setLoading] = useState(true);
 
-  const { debug } = useDebug('component');
+  const { debug } = useDebug("component");
 
   // Load recipes
   useEffect(() => {
@@ -30,18 +26,17 @@ export const RecipesView = (props) => {
           withImage: true,
           withTypes: true,
           withIngredients: false,
-          construct: true
+          construct: true,
         });
-        // setRecipes(allRecipes);
       } catch (error) {
-        console.error('Erreur lors de la récupération des recettes:', error);
+        console.error("Erreur lors de la récupération des recettes:", error);
       } finally {
         setLoading(false);
       }
     };
 
     if (needsRefresh) {
-      debug('RecipesView detected needsRefresh, loading recipes', 'recipes');
+      debug("RecipesView detected needsRefresh, loading recipes", "recipes");
       loadRecipes();
     }
   }, [needsRefresh]);
@@ -53,12 +48,12 @@ export const RecipesView = (props) => {
       withImage: true,
       withTypes: true,
       withIngredients: false,
-      construct: true
+      construct: true,
     });
   };
 
   const hasActiveFilters = useMemo(() => {
-    return Object.values(filters).some(filter => filter.active);
+    return Object.values(filters).some((filter) => filter.active);
   }, [filters]);
 
   const getEmptyMessage = useCallback(() => {
@@ -85,7 +80,12 @@ export const RecipesView = (props) => {
         />
       </Flex>
 
-      <Box position="fixed" bottom="4" right="50%" style={{ transform: 'translateX(50%)' }}>
+      <Box
+        position="fixed"
+        bottom="4"
+        right="50%"
+        style={{ transform: "translateX(50%)" }}
+      >
         <AppActions />
       </Box>
     </Flex>

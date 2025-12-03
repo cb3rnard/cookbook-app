@@ -1,28 +1,29 @@
-import { SyncProgress } from '@components/sync/SyncProgress';
-import { Notice } from '@components/ui/Notice';
-import { Button, Flex, Heading, Text } from '@radix-ui/themes';
-import { useEffect, useMemo } from 'react';
-import { useApi } from '../../contexts/ApiContext';
-import { useData } from '../../contexts/DataContext';
-import { useRecipes } from '../../contexts/RecipesContext';
-import { useSync } from '../../contexts/SyncContext';
-import { SyncCountBoxes } from '../sync/SyncCountBoxes';
+import { Notice } from "@components/ui/Notice";
+import { Box, Button, Flex, Heading, Strong, Text } from "@radix-ui/themes";
+import { useEffect, useMemo } from "react";
+import { SyncProgress } from "../../components/sync/SyncProgress";
+import { useApi } from "../../contexts/ApiContext";
+import { useData } from "../../contexts/DataContext";
+import { useRecipes } from "../../contexts/RecipesContext";
+import { useSync } from "../../contexts/SyncContext";
+import { SyncCountBoxes } from "../sync/SyncCountBoxes";
 
 export function SyncSettings() {
-  // Navigation entre vues
-  const { connection } = useApi();
-  const { isAuthenticated } = connection;
-  const { status, statusService, enableAutoSync, disableAutoSync, fullSync, incrementalSync, syncErrors } = useSync();
+  const { connection, session, toggleAutoSync } = useApi();
+  const { authenticated } = connection;
+  const { syncState, fullSync, incrementalSync, clearOperation } = useSync();
+  const { syncing } = syncState;
+  const { operation } = syncState;
   const { localCounts, remoteCounts, refreshAllCounts } = useData();
   const { setNeedsRefresh } = useRecipes();
 
-  useEffect(() => {
-    if (statusService) {
-      statusService.resetSyncOver();
-    }
-  }, [statusService]);
+  const lastSyncDateLocale = useMemo(() => {
+    return session.lastSyncDate
+      ? new Date(session.lastSyncDate).toLocaleString()
+      : null;
+  }, [session.lastSyncDate]);
 
-  // Charger les counts au démarrage
+  // Refresh local and remote count on mount
   useEffect(() => {
     const fetchData = async () => {
       await refreshAllCounts();
@@ -30,54 +31,49 @@ export function SyncSettings() {
     fetchData();
   }, [refreshAllCounts]);
 
-  const resetView = () => {
-    statusService.resetSyncOver();
-  };
-
   const handleSync = async () => {
     try {
-      console.log('Lancement de la synchronisation complète...');
+      console.log("Lancement de la synchronisation complète...");
       const results = await fullSync(400);
       setNeedsRefresh(Date.now());
-    } catch (error) {
-    }
+    } catch (error) {}
   };
 
   const handleIncrementalSync = async () => {
     try {
       const results = await incrementalSync(400);
       setNeedsRefresh(Date.now());
-    } catch (error) {
+    } catch (error) {}
+  };
+
+  const Errors = useMemo(() => {
+    if (!operation.completed) {
+      return null;
     }
-  };
-
-  const handleDisableAutoSync = async () => {
-    await disableAutoSync();
-    resetView();
-  };
-
-  const handleEnableAutoSync = async () => {
-    await enableAutoSync();
-    resetView();
-  };
-
-  const error = useMemo(() => {
-    if (status.isSyncOver) {
-      if (status.syncErrors && status.syncErrors.length > 0) {
-        return status.syncErrors.map((e, index) => (<span key={index}>{e.message}{index < status.syncErrors.length - 1 ? <br /> : null}</span>));
-      }
-    }
-    return null;
-  }, [status]);
+    return operation.summary.errors.map((err, index) => (
+      <Box key={index}>
+        <Text as="p" size="2" color="red">
+          {err.message}
+        </Text>
+        {(err.step.entity || err.step.action) && (
+          <Text>
+            {err.step.entity && <Strong>{err.step.entity}</Strong>}
+            {err.step.entity && err.step.action && " | "}
+            {err.step.action}
+          </Text>
+        )}
+        {index < operation.summary.errors.length - 1 ? <br /> : null}
+      </Box>
+    ));
+  }, [operation.completed, operation.summary.errors]);
 
   return (
     <Flex className="settings__panel" direction="column" gap="2">
       <Heading as="h2">Synchronisation</Heading>
       <Flex direction="column" gap="4">
-
-        {status.lastSync ? (
+        {session.lastSyncDateLocale ? (
           <Text as="div" size="1" color="gray">
-            Dernière synchronisation : {new Date(status.lastSync).toLocaleString()}
+            Dernière synchronisation : {lastSyncDateLocale}
           </Text>
         ) : (
           <Text as="div" size="1" color="gray">
@@ -85,43 +81,46 @@ export function SyncSettings() {
           </Text>
         )}
 
-        {(status.isSyncing || status.isSyncOver) ? (
+        {syncing || operation.completed ? (
           <>
-            <Heading as="h5" size="2">Synchronisation en cours...</Heading>
-            <SyncProgress onClose={resetView} />
+            <SyncProgress onClose={clearOperation} />
           </>
         ) : (
           <>
-            {status.autoSync ? (
-              // Connecté et synchronisation active
-              <Notice
-                type="success"
-                title="La synchronisation automatique est active"
-                size="2"
-              >
-                <div>
-                  <Button onClick={handleDisableAutoSync} variant="surface">
-                    Désactiver
-                  </Button>
-                </div>
-              </Notice>
-            ) : (
-              // Connecté mais synchronisation inactive
-              <Notice
-                type="warning"
-                title="La synchronisation automatique est désactivée"
-                size="2"
-              >
-                <div>
-                  <Button onClick={handleEnableAutoSync}>
-                    Activer
-                  </Button>
-                </div>
-              </Notice>
+            {session.active && (
+              <>
+                {session.autoSync ? (
+                  // Connecté et synchronisation active
+                  <Notice
+                    type="success"
+                    title="La synchronisation automatique est active"
+                    size="2"
+                  >
+                    <div>
+                      <Button onClick={toggleAutoSync} variant="surface">
+                        Désactiver
+                      </Button>
+                    </div>
+                  </Notice>
+                ) : (
+                  // Connecté mais synchronisation inactive
+                  <Notice
+                    type="warning"
+                    title="La synchronisation automatique est désactivée"
+                    size="2"
+                  >
+                    <div>
+                      <Button onClick={toggleAutoSync} variant="primary">
+                        Activer
+                      </Button>
+                    </div>
+                  </Notice>
+                )}
+              </>
             )}
 
             <SyncCountBoxes local={localCounts} remote={remoteCounts} />
-            {(localCounts?.hasChanges || remoteCounts?.hasChanges) ? (
+            {localCounts?.hasChanges || remoteCounts?.hasChanges ? (
               <Notice
                 type="warning"
                 title="Des modifications n'ont pas été synchronisées"
@@ -129,7 +128,8 @@ export function SyncSettings() {
                 size="2"
               />
             ) : (
-              (localCounts?.all.length === 0 && remoteCounts?.all.length === 0) && (
+              localCounts?.all.length === 0 &&
+              remoteCounts?.all.length === 0 && (
                 <Notice
                   type="info"
                   title="Aucune donnée à synchroniser"
@@ -138,16 +138,25 @@ export function SyncSettings() {
                 />
               )
             )}
-            {isAuthenticated &&
+            {authenticated && (
               <Flex gap="2" wrap="wrap">
-                <Button className="settings__sync button" onClick={handleIncrementalSync} disabled={status.isSyncing}>
+                <Button
+                  className="settings__sync button"
+                  onClick={handleIncrementalSync}
+                  disabled={syncing}
+                >
                   Synchroniser les données modifiées
                 </Button>
-                <Button className="settings__sync button" onClick={handleSync} variant="surface" disabled={status.isSyncing}>
+                <Button
+                  className="settings__sync button"
+                  onClick={handleSync}
+                  variant="surface"
+                  disabled={syncing}
+                >
                   Synchroniser toutes les données
                 </Button>
               </Flex>
-            }
+            )}
           </>
         )}
       </Flex>

@@ -1,183 +1,205 @@
-import { Button, Flex, Heading, Spinner, TextField } from '@radix-ui/themes';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useApi } from '../../contexts/ApiContext.jsx';
-import { useSettings } from '../../contexts/SettingsContext.jsx';
-import { Notice } from '../ui/Notice.jsx';
+import { Button, Flex, Heading, Text, TextField } from "@radix-ui/themes";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useApi } from "../../contexts/ApiContext.jsx";
+import { useSettings } from "../../contexts/SettingsContext.jsx";
+import { LoadingIndicator } from "../ui/LoadingIndicator.jsx";
+import { Notice } from "../ui/Notice.jsx";
 
-export function ApiSettings({ }) {
-  const {
-    checkConnectivity,
-    userSession,
-    connection,
-    connectionStatus,
-    login,
-    logout
-  } = useApi();
+export function ApiSettings({}) {
+  const { checkConnectivity, session, connection, login, logout } = useApi();
+  const { connecting, status } = connection;
+  const [currentStatus, setCurrentStatus] = useState(status);
+  const [logging, setLogging] = useState(false);
   const { getApiCredentialsSettings } = useSettings();
 
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [notice, setNotice] = useState(null);
+  useEffect(() => {
+    const check = async () => {
+      if (!connecting) {
+        await checkConnectivity();
+      }
+    };
+    check();
+  }, [checkConnectivity]);
+
   const [credentials, setCredentials] = useState({
-    apiUrl: '',
-    apiUser: '',
-    apiPassword: ''
+    apiUrl: "",
+    apiUser: "",
+    apiPassword: "",
   });
 
-  const isDisabled = useMemo(() => (userSession.isActive && !connection.isDisconnected) || false, [userSession.isActive, connection.isDisconnected]);
+  const isDisabled = useMemo(
+    () => session.active && !connection.expired,
+    [session.active, connection.expired],
+  );
+
+  const canLogin = useMemo(() => {
+    return (
+      credentials.apiUrl &&
+      credentials.apiUser &&
+      credentials.apiPassword &&
+      !isDisabled
+    );
+  }, [credentials, isDisabled]);
 
   // Initialisation des paramètres de l'API et vérification de la connectivité
   useEffect(() => {
     const init = async () => {
       const newCredentials = { ...credentials };
-      if(userSession.isActive) {
-        newCredentials.apiUrl = userSession.apiUrl || '';
-        newCredentials.apiUser = (userSession.user && userSession.user.email) ? userSession.user.email : '';
+      if (session.active) {
+        newCredentials.apiUrl = session.apiUrl;
+        newCredentials.apiUser = session.user.email;
       } else {
-        const { savedApiUrl: apiUrl, savedApiUser: apiUser } = await getApiCredentialsSettings();
-        newCredentials.apiUrl = apiUrl || '';
-        newCredentials.apiUser = apiUser || '';
+        const { savedApiUrl: apiUrl, savedApiUser: apiUser } =
+          await getApiCredentialsSettings();
+        newCredentials.apiUrl = apiUrl || "";
+        newCredentials.apiUser = apiUser || "";
       }
       setCredentials(newCredentials);
     };
     init();
-  }, [userSession.isActive]);
+  }, [session.active]);
 
-  const handleInput = useCallback((e) => {
-    if (isDisabled) {
-      return;
-    }
-    const { name, value } = e.target;
+  const handleInput = useCallback(
+    (e) => {
+      if (isDisabled) {
+        return;
+      }
+      const { name, value } = e.target;
 
-    setCredentials((prev) => {
-      return ({ ...prev, [name]: value })
-    });
-  }, [isDisabled]);
+      setCredentials((prev) => {
+        return { ...prev, [name]: value };
+      });
+    },
+    [isDisabled],
+  );
 
-  const handleApiSubmit = useCallback(async (e) => {
-    e.preventDefault();
-    if (isDisabled) {
-      return;
-    }
+  const handleApiSubmit = useCallback(
+    async (e) => {
+      e.preventDefault();
+      if (!canLogin) {
+        return;
+      }
+      setLogging(true);
 
-    setNotice(null);
-
-    if (credentials.apiUrl && credentials.apiUser && credentials.apiPassword) {
-      setIsConnecting(true);
       try {
-        const successful = await login(credentials.apiUrl, credentials.apiUser, credentials.apiPassword);
+        const successful = await login(
+          credentials.apiUrl,
+          credentials.apiUser,
+          credentials.apiPassword,
+        );
         if (successful) {
-          setNotice({
-            type: 'success',
-            title: 'Connexion à l\'API réussie',
-            message: 'Connecté avec succès.'
-          });
-          setTimeout(() => {
-            setNotice(null);
-          }, 3000);
           // Réinitialiser le mot de passe
-          setCredentials(prev => ({ ...prev, apiPassword: '' }));
+          setCredentials((prev) => ({ ...prev, apiPassword: "" }));
         }
       } catch (error) {
-        setNotice({
-          type: 'error',
-          title: 'Échec de la connexion à l\'API',
-          message: error.message
-        });
       } finally {
-        setIsConnecting(false);
+        setLogging(false);
       }
-    }
-  }, [credentials, isDisabled]);
+    },
+    [canLogin, credentials, isDisabled],
+  );
 
   const handleApiLogout = async (e) => {
     e.preventDefault();
     await logout();
   };
 
-  const connectionNotice = useMemo(() => {
-    if (isConnecting) {
-      return (
-        <Notice
-          type="info"
-          title="Connexion en cours..."
-          message="Veuillez patienter pendant que nous tentons de nous connecter à l'API."
-        />
-      );
-    } else {
-      switch (connectionStatus) {
-        case 'offline':
-          return (
-            <Notice
-              type="error"
-              title="Hors ligne"
-              message="L'application est hors ligne."
-            />
-          );
-        case 'unavailable':
-          return (
-            <Notice
-              type="warning"
-              title="Serveur indisponible"
-              message="Le serveur API n'est pas accessible."
-            />
-          );
-        case 'available':
-          return (
-            <Notice
-              type="info"
-              title="Connexion possible"
-              message="Vous pouvez vous connecter à l'API."
-            />
-          );
-        case 'connected':
-          return (
-            <Notice
-              type="success"
-              title="Connecté"
-              message="Vous êtes connecté à l'API."
-            />
-          );
-        case 'disconnected':
-          return (
-            <Notice
-              type="error"
-              title="Déconnecté"
-              message="Vous avez été déconnecté de l'API. Tentez de vous de vous reconnecter."
-            />
-          );
-        case 'error':
-          return (
-            <Notice
-              type="error"
-              title="Erreur de connexion"
-              message="Une erreur s'est produite lors de la connexion à l'API."
-            />
-          );
-        default:
-          return null;
-      }
+  useEffect(() => {
+    if (!logging && !connecting) {
+      setCurrentStatus(status);
     }
-  }, [isConnecting, connectionStatus]);
+  }, [status, connecting, logging]);
+
+  const connectionNotice = useMemo(() => {
+    switch (currentStatus) {
+      case "offline":
+        return (
+          <Notice
+            type="error"
+            title="Hors ligne"
+            message="Vous êtes hors ligne."
+          />
+        );
+      case "unavailable":
+        return (
+          <Notice
+            type="warning"
+            title="Serveur indisponible"
+            message="Le serveur API n'est pas accessible."
+          />
+        );
+      case "available":
+        return (
+          <Notice
+            type="info"
+            title="Connexion possible"
+            message="Vous pouvez vous connecter à l'API."
+          />
+        );
+      case "authenticated":
+        return (
+          <Notice
+            type="success"
+            title="Connecté"
+            message="Vous êtes connecté à l'API."
+          />
+        );
+      case "expired":
+        return (
+          <Notice
+            type="error"
+            title="Déconnecté"
+            message="Votre session a expiré. Veuillez vous reconnecter."
+          />
+        );
+      case "disconnected":
+        return (
+          <Notice
+            type="error"
+            title="Déconnecté"
+            message="Vous êtes déconnecté de l'API."
+          />
+        );
+      case "error":
+        return (
+          <Notice
+            type="error"
+            title="Erreur de connexion"
+            message="Une erreur s'est produite lors de la connexion à l'API."
+          />
+        );
+      default:
+        return null;
+    }
+  }, [currentStatus]);
 
   return (
     <Flex className="settings__panel" direction="column" gap="6">
-      <Heading as="h2">
-        API Distante
-      </Heading>
+      <Heading as="h2">API Distante</Heading>
       <Flex direction="column" gap="4">
         {connectionNotice}
-        <form onSubmit={handleApiSubmit} className="settings__form" style={{ position: 'relative' }}>
-          <Flex direction="column" gap="3" justify={'start'}>
-            {(isConnecting) &&
-              <div className="settings__connecting" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                <Spinner size="3" />
-              </div>
-            }
-            <fieldset style={(isConnecting) ? { opacity: 0.5 } : {}}>
-              <legend><Heading as="h3" size="2">Authentification</Heading></legend>
+        {logging && (
+          <LoadingIndicator>
+            <Text>Connexion à l'API...</Text>
+          </LoadingIndicator>
+        )}
+        <form
+          onSubmit={handleApiSubmit}
+          className="settings__form"
+          style={{ position: "relative" }}
+        >
+          <Flex direction="column" gap="3" justify={"start"}>
+            <fieldset style={logging ? { opacity: 0.5 } : {}}>
+              <legend>
+                <Heading as="h3" size="2">
+                  Authentification
+                </Heading>
+              </legend>
               <Flex direction={"column"} gap="2">
                 <div>
-                  <label htmlFor="apiUrl" className="label">URL de l'API</label>
+                  <label htmlFor="apiUrl" className="label">
+                    URL de l'API
+                  </label>
                   <TextField.Root
                     type="text"
                     id="apiUrl"
@@ -189,7 +211,9 @@ export function ApiSettings({ }) {
                   />
                 </div>
                 <div>
-                  <label htmlFor="apiUser" className="label">Email</label>
+                  <label htmlFor="apiUser" className="label">
+                    Email
+                  </label>
                   <TextField.Root
                     type="email"
                     id="apiUser"
@@ -201,7 +225,9 @@ export function ApiSettings({ }) {
                 </div>
                 {!isDisabled && (
                   <div>
-                    <label htmlFor="apiPassword" className='label'>Mot de passe</label>
+                    <label htmlFor="apiPassword" className="label">
+                      Mot de passe
+                    </label>
                     <TextField.Root
                       type="password"
                       id="apiPassword"
@@ -215,19 +241,19 @@ export function ApiSettings({ }) {
               </Flex>
             </fieldset>
             <Flex gap="2">
-              {(!userSession.isActive || connection.isDisconnected) && (
+              {(!session.active || connection.expired) && (
                 <Button
                   type="submit"
-                  disabled={isConnecting}
+                  disabled={logging || !canLogin}
                   onClick={handleApiSubmit}
                 >
-                  {connection.isDisconnected ? 'Reconnexion' : 'Connexion'}
+                  {connection.expired ? "Reconnexion" : "Connexion"}
                 </Button>
               )}
-              {(userSession.isActive) && (
+              {session.active && (
                 <Button
                   variant="surface"
-                  disabled={isConnecting}
+                  disabled={logging}
                   onClick={handleApiLogout}
                 >
                   Déconnexion de l'API
