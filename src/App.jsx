@@ -1,17 +1,18 @@
-import { Flex } from '@radix-ui/themes';
-import { useEffect, useMemo, useState } from 'react';
-import { GlobalUI } from './components/layout/GlobalUI';
-import { Header } from './components/layout/Header';
-import { OverlayManager } from './components/OverlayManager';
-import { ApiProvider } from './contexts/ApiContext';
-import { DataProvider } from './contexts/DataContext';
-import { RecipeProvider } from './contexts/RecipesContext';
-import { SettingsProvider } from './contexts/SettingsContext';
-import { SyncProvider } from './contexts/SyncContext';
-import { ViewProvider, useView } from './contexts/ViewContext';
-import { PWABadge } from './PWABadge';
-import { StorageService } from './services/StorageService';
-import { RecipesView } from './views/RecipesView';
+import { Flex } from "@radix-ui/themes";
+import { useEffect, useMemo, useState } from "react";
+import { GlobalUI } from "./components/layout/GlobalUI";
+import { Header } from "./components/layout/Header";
+import { OverlayManager } from "./components/OverlayManager";
+import { ApiProvider } from "./contexts/ApiContext";
+import { DataProvider } from "./contexts/DataContext";
+import { RecipeProvider } from "./contexts/RecipesContext";
+import { SettingsProvider } from "./contexts/SettingsContext";
+import { SyncProvider } from "./contexts/SyncContext";
+import { ViewProvider, useView } from "./contexts/ViewContext";
+import { PWABadge } from "./PWABadge";
+import { SettingsService } from "./services/SettingsService";
+import { StorageService } from "./services/StorageService";
+import { RecipesView } from "./views/RecipesView";
 
 function App() {
   return (
@@ -34,7 +35,10 @@ function App() {
 
 function Content() {
   const { uiState, currentOverlayView } = useView();
-  const lockView = useMemo(() => (uiState?.hasModal || currentOverlayView), [uiState, currentOverlayView]);
+  const lockView = useMemo(
+    () => uiState?.hasModal || currentOverlayView,
+    [uiState, currentOverlayView],
+  );
 
   // State management
   const [storageInfo, setStorageInfo] = useState(null);
@@ -47,6 +51,9 @@ function Content() {
 
   const initializeApp = async () => {
     try {
+      // Initialize settings (load user preferences into CONFIG.settings)
+      await SettingsService.initialize();
+
       // Request persistent storage
       const persistent = await StorageService.requestPersistentStorage();
       setIsPersistent(persistent);
@@ -55,7 +62,7 @@ function Content() {
       const storage = await StorageService.getStorageEstimate();
       setStorageInfo(storage);
     } catch (error) {
-      console.error('Failed to initialize app:', error);
+      console.error("Failed to initialize app:", error);
     }
   };
 
@@ -65,7 +72,7 @@ function Content() {
         const storage = await StorageService.getStorageEstimate();
         setStorageInfo(storage);
       } catch (error) {
-        console.error('Failed to fetch storage info:', error);
+        console.error("Failed to fetch storage info:", error);
       }
     };
 
@@ -74,11 +81,13 @@ function Content() {
 
   const mainProps = useMemo(() => {
     const props = {
-      maxHeight: lockView ? '100%' : null,
-      overflow: lockView ? 'hidden' : null
+      maxHeight: lockView ? "100%" : null,
+      overflow: lockView ? "hidden" : null,
     };
     // Remove null values
-    Object.keys(props).forEach(key => props[key] === null && delete props[key]);
+    Object.keys(props).forEach(
+      (key) => props[key] === null && delete props[key],
+    );
     return props;
   }, [lockView]);
 

@@ -1,6 +1,23 @@
 import { EventBus } from "../utils/EventBus.js";
 import { BaseStore } from "./BaseStore.js";
 
+const initialEndpointState = {
+  toImport: 0,
+  toExport: 0,
+  conflicts: [],
+  import: {
+    success: 0,
+    failed: 0,
+    errors: [], // Entity-level errors (non-blocking)
+  },
+  export: {
+    success: 0,
+    failed: 0,
+    errors: [], // Entity-level errors (non-blocking)
+  },
+  criticalError: null, // Endpoint-level critical error (stops endpoint sync)
+};
+
 const initialState = {
   syncing: false,
   operation: {
@@ -9,13 +26,19 @@ const initialState = {
       entity: "",
       action: "",
     },
-    summary: {
-      results: null,
-      errors: [],
-      conflicts: new Map(),
+    endpoints: new Map(),
+    totals: {
+      toSync: 0,
+      failed: 0,
+      conflicts: 0,
+      imported: 0,
+      exported: 0,
+      errors: 0,
+      criticalErrors: 0,
     },
     completed: false,
     success: true,
+    errors: [],
   },
 };
 
@@ -56,6 +79,8 @@ export class SyncStore extends BaseStore {
 
   /**
    * Updates sync status
+   * @param {string} entity Current entity being synced
+   * @param {string} action Current action being performed
    */
   updateOperation(entity = "", action = "") {
     this.setState({
@@ -70,13 +95,142 @@ export class SyncStore extends BaseStore {
   }
 
   /**
-   * Termine une opération de sync
-   * @param {boolean} success Indique si la sync a réussi
-   * @param {object|null} results Résultats de la sync
-   * @param {Array} conflicts Liste des conflits rencontrés
+   * Sets the counts of entities to sync for an endpoint
+   * @param {string} endpoint Endpoint name
+   * @param {number} toImport Number of entities to import
+   * @param {number} toExport Number of entities to export
    */
-  finishOperation(success = true, results = null, conflicts = []) {
+  setEndpointCounts(endpoint, toImport, toExport) {
+    const endpoints = this._state.operation.endpoints;
+    const endpointState = endpoints.get(endpoint) || {
+      ...initialEndpointState,
+    };
+
+    endpointState.toImport = toImport;
+    endpointState.toExport = toExport;
+
+    endpoints.set(endpoint, endpointState);
+
     this.setState({
+      operation: {
+        ...this._state.operation,
+        endpoints,
+      },
+    });
+  }
+
+  /**
+   * Adds conflicts detected for an endpoint
+   * @param {string} endpoint Endpoint name
+   * @param {Array} conflicts Array of conflict objects
+   */
+  setEndpointConflicts(endpoint, conflicts) {
+    const endpoints = this._state.operation.endpoints;
+    const endpointState = endpoints.get(endpoint) || {
+      ...initialEndpointState,
+    };
+
+    endpointState.conflicts = conflicts;
+
+    endpoints.set(endpoint, endpointState);
+
+    this.setState({
+      operation: {
+        ...this._state.operation,
+        endpoints,
+      },
+    });
+  }
+
+  /**
+   * Updates import results for an endpoint
+   * @param {string} endpoint Endpoint name
+   * @param {Object} results Import results {success, failed, errors}
+   */
+  setEndpointImportResults(endpoint, results) {
+    const endpoints = this._state.operation.endpoints;
+    const endpointState = endpoints.get(endpoint) || {
+      ...initialEndpointState,
+    };
+
+    endpointState.import = {
+      success: results.success || 0,
+      failed: results.failed || 0,
+      errors: results.errors || [],
+    };
+
+    endpoints.set(endpoint, endpointState);
+
+    this.setState({
+      operation: {
+        ...this._state.operation,
+        endpoints,
+      },
+    });
+  }
+
+  /**
+   * Updates export results for an endpoint
+   * @param {string} endpoint Endpoint name
+   * @param {Object} results Export results {success, failed, errors}
+   */
+  setEndpointExportResults(endpoint, results) {
+    const endpoints = this._state.operation.endpoints;
+    const endpointState = endpoints.get(endpoint) || {
+      ...initialEndpointState,
+    };
+
+    endpointState.export = {
+      success: results.success || 0,
+      failed: results.failed || 0,
+      errors: results.errors || [],
+    };
+
+    endpoints.set(endpoint, endpointState);
+
+    this.setState({
+      operation: {
+        ...this._state.operation,
+        endpoints,
+      },
+    });
+  }
+
+  /**
+   * Sets a critical error for an endpoint
+   * Critical errors stop sync for that endpoint
+   * @param {string} endpoint Endpoint name
+   * @param {string} errorMessage Error message
+   */
+  setEndpointCriticalError(endpoint, errorMessage) {
+    const endpoints = this._state.operation.endpoints;
+    const endpointState = endpoints.get(endpoint) || {
+      ...initialEndpointState,
+    };
+
+    endpointState.criticalError = errorMessage;
+
+    endpoints.set(endpoint, endpointState);
+
+    this.setState({
+      operation: {
+        ...this._state.operation,
+        endpoints,
+      },
+    });
+  }
+
+  /**
+   * Finishes the sync operation
+   */
+  finishOperation() {
+    const totals = this._calculateTotals(this._state.operation.endpoints);
+
+    // Check if all entities were processed
+    const processed = totals.success + totals.failed;
+    const isComplete = totals.toSync === 0 || processed === totals.toSync;
+
+    const syncState = {
       syncing: false,
       operation: {
         ...this._state.operation,
@@ -84,60 +238,73 @@ export class SyncStore extends BaseStore {
           entity: "",
           action: "",
         },
-        summary: {
-          results: results,
-          errors: this._state.operation.summary.errors,
-          conflicts: conflicts,
-        },
+        totals,
         completed: new Date().toISOString(),
-        success: success,
+        success:
+          totals.failed === 0 &&
+          this._state.operation.errors.length === 0 &&
+          isComplete,
       },
+    };
+
+    this.setState(syncState);
+    this.eventBus.emit("sync:completed", this._state.operation);
+    return syncState.operation.success;
+  }
+
+  /**
+   * Calculates total results from all endpoints
+   * @param {Map} endpointsMap Map of endpoint states
+   * @returns {Object} Totals object
+   */
+  _calculateTotals(endpointsMap) {
+    const totals = {
+      allFailed: false,
+      toSync: 0,
+      failed: 0,
+      conflicts: 0,
+      imported: 0,
+      exported: 0,
+      errors: 0,
+      criticalErrors: 0,
+    };
+
+    endpointsMap.forEach((state) => {
+      totals.toSync += state.toImport + state.toExport;
+      totals.failed += state.import.failed + state.export.failed;
+      totals.conflicts += state.conflicts.length;
+      totals.imported += state.import.success;
+      totals.exported += state.export.success;
+      totals.errors += state.import.errors.length + state.export.errors.length;
+      if (state.criticalError) {
+        totals.criticalErrors++;
+      }
     });
-    this.eventBus.emit("sync:completed");
+
+    totals.success = totals.imported + totals.exported;
+    totals.allFailed = totals.failed > 0 && totals.success === 0;
+    return totals;
   }
 
   clearOperation() {
     this.setState(initialState);
   }
 
-  addOperationError(error) {
-    console.error(error);
-    this._state.operation.summary.errors.push({
-      message: error,
+  /**
+   * Adds an error to the current sync operation
+   * @param {string} errorMessage Error message
+   */
+  addOperationError(errorMessage) {
+    const errors = [...this._state.operation.errors];
+    errors.push({
+      message: errorMessage,
       step: { ...this._state.operation.step },
     });
-  }
 
-  addOperationConflict(
-    type = "",
-    endpoint = "",
-    resolution = "",
-    keepedUuid = "",
-  ) {
-    if (!type || !endpoint || !resolution) {
-      return;
-    }
-    const conflicts = this.conflicts;
-    if (!conflicts.has(type)) {
-      conflicts.set(type, new Map());
-    }
-    if (!conflicts.get(type).has(endpoint)) {
-      conflicts.get(type).set(endpoint, []);
-    }
-
-    const conflict = {
-      resolution: resolution,
-      keepedUuid: keepedUuid,
-    };
-
-    conflicts.get(type).get(endpoint).push(conflict);
     this.setState({
       operation: {
         ...this._state.operation,
-        summary: {
-          ...this._state.operation.summary,
-          conflicts: conflicts,
-        },
+        errors,
       },
     });
   }

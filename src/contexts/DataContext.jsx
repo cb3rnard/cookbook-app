@@ -5,8 +5,11 @@ import {
   useEffect,
   useMemo,
 } from "react";
+import { CONFIG } from "../config/config";
+import { useSettings } from "../contexts/SettingsContext";
 import { useObservableState } from "../hooks/useObservableState";
 import { DataService } from "../services/data/DataService";
+import { EventBus } from "../services/utils/EventBus";
 import { useApi } from "./ApiContext";
 
 const DataContext = createContext();
@@ -14,6 +17,7 @@ const DataContext = createContext();
 export function DataProvider({ children }) {
   const { connection } = useApi();
   const { authenticated, available } = connection;
+  const { settings } = useSettings();
 
   const dataService = useMemo(() => new DataService());
   const dataState = useObservableState(dataService.dataStore);
@@ -44,10 +48,63 @@ export function DataProvider({ children }) {
     dataService.refreshRemoteCounts();
   }, [authenticated, available, dataService]);
 
+  useEffect(() => {
+    if (!authenticated) {
+      return;
+    }
+
+    const refreshDelayMinutes = settings.remoteDataRefreshMinutes
+      ? settings.remoteDataRefreshMinutes
+      : CONFIG.DEFAULTS.remoteDataRefreshMinutes;
+
+    // Check if we need immediate fetch
+    const lastCheckInMinutes = remoteCounts.lastCheck
+      ? (Date.now() - remoteCounts.lastCheck) / (60 * 1000)
+      : null;
+
+    const shouldFetchNow =
+      lastCheckInMinutes === null || lastCheckInMinutes >= refreshDelayMinutes;
+
+    if (shouldFetchNow) {
+      fetchRemoteCounts();
+    }
+
+    // Setup interval for periodic refresh
+    const intervalMs = refreshDelayMinutes * 60 * 1000;
+    const interval = setInterval(() => {
+      fetchRemoteCounts();
+    }, intervalMs);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [
+    authenticated,
+    fetchRemoteCounts,
+    remoteCounts.lastCheck,
+    settings.remoteDataRefreshMinutes,
+  ]);
+
   // Récupération combinée (locale + distante si possible)
   const refreshAllCounts = useCallback(async () => {
     dataService.refreshAllCounts();
   }, [dataService]);
+
+  useEffect(() => {
+    const eventBus = EventBus.getInstance();
+
+    const handleSyncCompleted = (operation) => {
+      if (!operation.allFailed) {
+        refreshAllCounts();
+      }
+    };
+
+    eventBus.on("sync:completed", handleSyncCompleted);
+
+    return () => {
+      eventBus.off("sync:completed", handleSyncCompleted);
+    };
+  }, [refreshAllCounts]);
 
   const totalLocalCounts = {
     all:
@@ -78,7 +135,7 @@ export function DataProvider({ children }) {
   };
 
   const hasLocalChanges = localCounts.hasChanges;
-  const hasRemoteChanges = remoteCounts.hasChanges && remoteCounts.available;
+  const hasRemoteChanges = remoteCounts.hasChanges;
 
   const value = {
     // États bruts

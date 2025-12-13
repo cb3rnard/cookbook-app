@@ -1,7 +1,7 @@
 import { BaseEntity } from "./BaseEntity";
 
 /**
- * Entité modèle synchronisable
+ * Base sync model entity
  */
 export class BaseSyncEntity extends BaseEntity {
   constructor(data = {}) {
@@ -11,17 +11,19 @@ export class BaseSyncEntity extends BaseEntity {
     this.dateModify = data.dateModify || null;
     this.dateDeleted = data.dateDeleted || null;
 
-    // Champs de synchronisation
+    // Synchronization fields
     this.version = data.version || 0;
     this.lastSyncDate = data.lastSyncDate || null;
 
     this.isDirty = data.isDirty ? 1 : 0;
-    // L'uuid est défini par le repository à l'enregistrement pour distinguer ajout et édition
+    // The uuid is set by the repository upon saving to distinguish between addition and edition
     this.uuid = data.uuid || null;
   }
 
   /**
-   * Marque comme synchronisé
+   * Marks as synced
+   * @param {string|null} dateSync Date of synchronization
+   * @returns {BaseSyncEntity} The updated entity
    */
   synced(dateSync = null) {
     if (!dateSync || typeof dateSync !== "string") {
@@ -35,7 +37,9 @@ export class BaseSyncEntity extends BaseEntity {
   }
 
   /**
-   * Met à jour la date de modification et marque comme dirty
+   * Updates the modification date and marks as dirty
+   * @param {boolean} created If true, sets the creation date if not already set
+   * @returns {BaseSyncEntity} The updated entity
    */
   touch(created = false) {
     if (created && !this.dateAdd) {
@@ -50,6 +54,10 @@ export class BaseSyncEntity extends BaseEntity {
     return this;
   }
 
+  /**
+   * Prepares the entity for local storage
+   * @returns {Object} Data ready for storage
+   */
   toStorage() {
     return {
       ...super.toStorage(),
@@ -62,6 +70,10 @@ export class BaseSyncEntity extends BaseEntity {
     };
   }
 
+  /**
+   * Prepares the entity for the API
+   * @returns {Object} Data ready for the API
+   */
   toApi() {
     return {
       ...super.toStorage(),

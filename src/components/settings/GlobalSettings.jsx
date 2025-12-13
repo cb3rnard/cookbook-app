@@ -1,6 +1,5 @@
 import { CheckCircledIcon, CrossCircledIcon } from "@radix-ui/react-icons";
 import { Card, Flex, Heading, Separator, Text } from "@radix-ui/themes";
-import { useEffect } from "react";
 import { useData } from "../../contexts";
 import { useApi } from "../../contexts/ApiContext";
 import { LoadingWrapper } from "../ui/LoadingWrapper";
@@ -10,14 +9,7 @@ export function GlobalSettings() {
   const { user } = session;
   const { autoSync } = session;
   const { apiUrl, authenticated, disconnected } = connection;
-  const { localCounts, fetchLocalCounts } = useData();
-
-  useEffect(() => {
-    const fetchCounts = async () => {
-      await fetchLocalCounts();
-    };
-    fetchCounts();
-  }, []);
+  const { localCounts } = useData();
 
   return (
     <Flex direction="column" gap="4">

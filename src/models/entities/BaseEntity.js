@@ -1,37 +1,57 @@
 import { ValidationError } from "../../services/utils/ValidationError";
 
 /**
- * Entité modèle
+ * Base model entity
  */
 export class BaseEntity {
   static provided = [];
 
+  /**
+   * @param {Object} data Initial data to populate the entity
+   */
   constructor(data = {}) {
     this.uuid = data.uuid || this.generateUuid();
     this.provided = Object.keys(data);
   }
 
   /**
-   * Génère un UUID v4 simple
+   * Generates a simple UUID v4
+   * @returns {string} Generated UUID
+   *
    */
   generateUuid() {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-      const r = Math.random() * 16 | 0;
-      const v = c === 'x' ? r : (r & 0x3 | 0x8);
-      return v.toString(16);
-    });
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(
+      /[xy]/g,
+      function (c) {
+        const r = (Math.random() * 16) | 0;
+        const v = c === "x" ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+      },
+    );
   }
 
+  /**
+   * Sets a new UUID for the entity
+   */
   setUuid() {
     this.uuid = this.generateUuid();
   }
 
+  /**
+   * Defines validation rules for the entity
+   * Should be overridden by subclasses
+   * @returns {Object} Validation rules
+   */
   validationRules() {
     return {};
   }
 
   /**
-   * Validation d'après les règles fournies
+   * Validates the entity against its rules
+   * @param {Object|null} rules Custom rules to validate against
+   * @param {boolean} update If true, only validates provided fields (for updates)
+   * @throws {ValidationError} If validation fails
+   * @return {boolean} True if validation passes
    */
   validate(rules, update = false) {
     if (!rules) {
@@ -40,7 +60,7 @@ export class BaseEntity {
     const errors = [];
     for (const [field, conditions] of Object.entries(rules)) {
       // Saute la validation des champs non fournis lors d'une mise à jour partielle
-      if (update && typeof (this.provided[field]) === 'undefined') {
+      if (update && typeof this.provided[field] === "undefined") {
         continue;
       }
       for (const { condition, message } of conditions) {
@@ -57,16 +77,17 @@ export class BaseEntity {
     return true;
   }
 
-
   /**
-   * Clone l'entité
+   * Clones the entity
+   * @returns {BaseEntity} Cloned entity
    */
   clone() {
     return new this.constructor(JSON.parse(JSON.stringify(this)));
   }
 
   /**
-   * Prépare pour le stockage local
+   * Prepares the entity for local storage
+   * @returns {Object} Data ready for storage
    */
   toStorage() {
     return {
@@ -74,6 +95,10 @@ export class BaseEntity {
     };
   }
 
+  /**
+   * Prepares only provided fields for local storage
+   * @returns {Object} Data ready for storage
+   */
   toStorageUpdate() {
     return this.provided.reduce((obj, key) => {
       obj[key] = this[key];
@@ -82,7 +107,8 @@ export class BaseEntity {
   }
 
   /**
-   * Prépare pour l'API
+   * Prepares the entity for the API
+   * @returns {Object} Data ready for the API
    */
   toApi() {
     return {

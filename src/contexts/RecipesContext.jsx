@@ -56,16 +56,6 @@ export const RecipeProvider = ({ children }) => {
     };
   }, [eventBus, recipes]);
 
-  const getRecipe = async (uuid, hydrate = {}) => {
-    try {
-      const recipe = await repository.get(uuid, hydrate);
-      return recipe;
-    } catch (error) {
-      console.error("Erreur lors de la récupération de la recette:", error);
-      throw error;
-    }
-  };
-
   const getRecipes = async (filters, hydrate = {}) => {
     setHydrateOptions(hydrate);
     setFilters(filters);
@@ -137,7 +127,6 @@ export const RecipeProvider = ({ children }) => {
         recipes,
         needsRefresh,
         // Actions
-        getRecipe,
         getRecipes,
         saveRecipe,
         deleteRecipe,

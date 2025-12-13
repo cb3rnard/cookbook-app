@@ -1,22 +1,30 @@
-import { CheckIcon, HeartFilledIcon, HeartIcon } from '@radix-ui/react-icons';
-import { Box, Button, Card, Em, Flex, Heading, Text } from '@radix-ui/themes';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useRecipes } from '../../contexts/RecipesContext';
-import { Recipe } from '../../models/entities/Recipe';
-import { RecipeNoteForm } from '../forms/RecipeNoteForm';
+import { CheckIcon, HeartFilledIcon, HeartIcon } from "@radix-ui/react-icons";
+import { Box, Button, Card, Em, Flex, Heading, Text } from "@radix-ui/themes";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useApi, useData } from "../../contexts";
+import { useRecipes } from "../../contexts/RecipesContext";
+import { Recipe } from "../../models/entities/Recipe";
+import { RecipeNoteForm } from "../forms/RecipeNoteForm";
 import { ImageDisplay } from "../ui/ImageDisplay";
-import { LoadingWrapper } from '../ui/LoadingWrapper';
-import { Notice } from '../ui/Notice';
-import { Tag } from '../ui/Tag';
-import { RecipeNoteRow } from './RecipeNoteRow';
-import styles from './RecipeView.module.css';
+import { LoadingWrapper } from "../ui/LoadingWrapper";
+import { Notice } from "../ui/Notice";
+import { Tag } from "../ui/Tag";
+import { RecipeNoteRow } from "./RecipeNoteRow";
+import styles from "./RecipeView.module.css";
 
-export function RecipeView({ recipeUuid = null, recipeData = null, withNotes = true }) {
-  const [recipe, setRecipe] = useState(new Recipe);
+export function RecipeView({
+  recipeUuid = null,
+  recipeData = null,
+  withNotes = true,
+}) {
+  const { session } = useApi();
+  const [recipe, setRecipe] = useState(new Recipe());
   const [isNoteFormOpen, setIsNoteFormOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const { getDifficultyColor, getDifficultyLabel, getRecipe } = useRecipes();
+  const { getDifficultyColor, getDifficultyLabel } = useRecipes();
+  const { getRepository } = useData();
+  const repository = getRepository("recipes");
 
   useEffect(() => {
     // Sinon récupération recette existante depuis uuid
@@ -25,9 +33,9 @@ export function RecipeView({ recipeUuid = null, recipeData = null, withNotes = t
       try {
         setIsLoading(true);
 
-        const fetchedRecipe = await getRecipe(recipeUuid, {
+        const fetchedRecipe = await repository.get(recipeUuid, {
           withAll: true,
-          construct: true
+          construct: true,
         });
 
         setRecipe(fetchedRecipe);
@@ -43,37 +51,51 @@ export function RecipeView({ recipeUuid = null, recipeData = null, withNotes = t
     } else if (recipeData) {
       setRecipe(new Recipe(recipeData));
     } else {
-      setError(new Error('Aucune recette spécifiée.'));
+      setError(new Error("Aucune recette spécifiée."));
     }
   }, [recipeUuid, recipeData]);
 
-  useEffect(() => {
-  }, [recipe]);
+  useEffect(() => {}, [recipe]);
 
-  const handleDeleteNote = useCallback((noteUuid) => {
-    recipe.notes = recipe.notes.filter(note => note.uuid !== noteUuid);
-  }, [recipe]);
+  const handleDeleteNote = useCallback(
+    (noteUuid) => {
+      recipe.notes = recipe.notes.filter((note) => note.uuid !== noteUuid);
+    },
+    [recipe],
+  );
 
-  const handleSubmitNote = useCallback((newNote) => {
-    recipe.notes = [...recipe.notes, newNote];
-    setIsNoteFormOpen(false);
-  }, [recipe]);
+  const handleSubmitNote = useCallback(
+    (newNote) => {
+      recipe.notes = [...recipe.notes, newNote];
+      setIsNoteFormOpen(false);
+    },
+    [recipe],
+  );
 
   const formatTime = (time) => {
     const hours = Math.floor(time / 60);
     const minutes = time % 60;
-    return `${hours > 0 ? `${hours}h ` : ''}${minutes}min`;
+    return `${hours > 0 ? `${hours}h ` : ""}${minutes}min`;
   };
 
-  const difficultyColor = useMemo(() => getDifficultyColor(recipe.difficulty), [recipe.difficulty]);
-  const difficultyLabel = useMemo(() => getDifficultyLabel(recipe.difficulty), [recipe.difficulty]);
-
+  const difficultyColor = useMemo(
+    () => getDifficultyColor(recipe.difficulty),
+    [recipe.difficulty],
+  );
+  const difficultyLabel = useMemo(
+    () => getDifficultyLabel(recipe.difficulty),
+    [recipe.difficulty],
+  );
 
   return (
     <Box className={styles.view}>
       <LoadingWrapper isLoading={isLoading} m="2">
         {error ? (
-          <Notice type="error" title="Erreur lors du chargement de la recette." details={error.message} />
+          <Notice
+            type="error"
+            title="Erreur lors du chargement de la recette."
+            details={error.message}
+          />
         ) : (
           <>
             <header className={styles.header}>
@@ -99,7 +121,11 @@ export function RecipeView({ recipeUuid = null, recipeData = null, withNotes = t
               )}
               {/* DIFFICULTY */}
               {difficultyLabel && (
-                <Tag className={styles.difficulty} color={difficultyColor} uppercase={true}>
+                <Tag
+                  className={styles.difficulty}
+                  color={difficultyColor}
+                  uppercase={true}
+                >
                   {difficultyLabel}
                 </Tag>
               )}
@@ -111,14 +137,25 @@ export function RecipeView({ recipeUuid = null, recipeData = null, withNotes = t
               )}
             </header>
             <Flex direction="column" gap="8" p="4">
-              {recipe.uuid &&
-                <Text as="p" size="1">#{recipe.uuid}</Text>
-              }
+              <Flex direction="column" gap="2">
+                {recipe.uuid && (
+                  <Text as="p" size="1">
+                    #{recipe.uuid}
+                  </Text>
+                )}
+                {session.active && (
+                  <Text as="p" size="1" color="gray">
+                    {recipe.lastSyncDate
+                      ? `Dernière synchronisation ${session.lastSyncDate}`
+                      : "Jamais synchronisé"}
+                  </Text>
+                )}
+              </Flex>
               {/* INTRO */}
               <Flex justify="between" gap="4" wrap="wrap">
                 <Flex direction="column" gap="2" flexGrow="1" align="start">
                   {/* TYPES */}
-                  {(recipe.types && recipe.types.length > 0) && (
+                  {recipe.types && recipe.types.length > 0 && (
                     <Flex>
                       {recipe.types.map((type, index) => (
                         <Tag key={index}>{type.name}</Tag>
@@ -127,7 +164,10 @@ export function RecipeView({ recipeUuid = null, recipeData = null, withNotes = t
                   )}
                   <Flex gap="2" align="center">
                     {/* FAVORITE */}
-                    <Tag color={recipe.favorite ? 'red' : 'gray'} rounded={true}>
+                    <Tag
+                      color={recipe.favorite ? "red" : "gray"}
+                      rounded={true}
+                    >
                       {recipe.favorite ? (
                         <HeartFilledIcon width="20" height="20" fill="red" />
                       ) : (
@@ -136,36 +176,46 @@ export function RecipeView({ recipeUuid = null, recipeData = null, withNotes = t
                     </Tag>
 
                     {/* TESTED */}
-                    {(!!recipe.tested) && (
+                    {!!recipe.tested && (
                       <Tag color="green" rounded="true">
                         <CheckIcon /> Recette testée
                       </Tag>
                     )}
                   </Flex>
                   {/* DESCRIPTION */}
-                  {recipe.description &&
-                    <Text as="p" className={styles.description}><Em>{recipe.description}</Em></Text>
-                  }
+                  {recipe.description && (
+                    <Text as="p" className={styles.description}>
+                      <Em>{recipe.description}</Em>
+                    </Text>
+                  )}
                 </Flex>
 
                 {/* META */}
-                {(recipe.totalTime > 0 || recipe.portions) ? (
+                {recipe.totalTime > 0 || recipe.portions ? (
                   <Box className={styles.meta} minWidth="12rem">
                     {recipe.totalTime > 0 && (
                       <Flex direction="column">
                         <Flex gap="2" justify="between" wrap="wrap">
-                          <Heading as="h3" size="3" className="label">Durée:</Heading>
+                          <Heading as="h3" size="3" className="label">
+                            Durée:
+                          </Heading>
                           <Text size="2">{formatTime(recipe.totalTime)}</Text>
                         </Flex>
                         {recipe.timePreparation > 0 && (
                           <Flex gap="2" justify="between" wrap="wrap">
-                            <Heading as="h3" size="3" className="label">Préparation:</Heading>
-                            <Text size="2">{formatTime(recipe.timePreparation)}</Text>
+                            <Heading as="h3" size="3" className="label">
+                              Préparation:
+                            </Heading>
+                            <Text size="2">
+                              {formatTime(recipe.timePreparation)}
+                            </Text>
                           </Flex>
                         )}
                         {recipe.timeCook > 0 && (
                           <Flex gap="2" justify="between" wrap="wrap">
-                            <Heading as="h3" size="3" className="label">Cuisson:</Heading>
+                            <Heading as="h3" size="3" className="label">
+                              Cuisson:
+                            </Heading>
                             <Text size="2">{formatTime(recipe.timeCook)}</Text>
                           </Flex>
                         )}
@@ -173,7 +223,9 @@ export function RecipeView({ recipeUuid = null, recipeData = null, withNotes = t
                     )}
                     {recipe.portions && (
                       <Flex gap="2" justify="between" wrap="wrap">
-                        <Heading as="h3" size="3" className="label">Portions:</Heading>
+                        <Heading as="h3" size="3" className="label">
+                          Portions:
+                        </Heading>
                         <Text size="2">{recipe.portions}</Text>
                       </Flex>
                     )}
@@ -182,9 +234,11 @@ export function RecipeView({ recipeUuid = null, recipeData = null, withNotes = t
               </Flex>
 
               {/* INGREDIENTS */}
-              {(recipe.ingredients && recipe.ingredients.length > 0) && (
+              {recipe.ingredients && recipe.ingredients.length > 0 && (
                 <Flex direction="column" gap="2">
-                  <Heading as="h3" size="3">Ingrédients</Heading>
+                  <Heading as="h3" size="3">
+                    Ingrédients
+                  </Heading>
                   <Box asChild>
                     <ul className={styles.ingredients}>
                       {recipe.ingredients.map((ingredient, index) => (
@@ -194,7 +248,10 @@ export function RecipeView({ recipeUuid = null, recipeData = null, withNotes = t
                               <Card variant="soft" size="1">
                                 <Flex gap="1">
                                   <Text weight="medium">
-                                    {ingredient.quantity > 0 ? ingredient.quantity : ''}{ingredient?.unit || null}
+                                    {ingredient.quantity > 0
+                                      ? ingredient.quantity
+                                      : ""}
+                                    {ingredient?.unit || null}
                                   </Text>
                                   <Text>{ingredient.name}</Text>
                                 </Flex>
@@ -216,7 +273,9 @@ export function RecipeView({ recipeUuid = null, recipeData = null, withNotes = t
               {/* ETAPES */}
               {recipe.steps && recipe.steps.length > 0 && (
                 <Flex direction="column" gap="2">
-                  <Heading as="h3" size="3">Étapes</Heading>
+                  <Heading as="h3" size="3">
+                    Étapes
+                  </Heading>
                   <Box asChild>
                     <ol className={styles.steps}>
                       {recipe.steps.map((step, index) => (
@@ -232,14 +291,27 @@ export function RecipeView({ recipeUuid = null, recipeData = null, withNotes = t
               )}
             </Flex>
             {/* FOOTER */}
-            <Flex as="footer" className={styles.footer} direction="column" justify="between" gap="4" my="6" pt="6" px="4">
+            <Flex
+              as="footer"
+              className={styles.footer}
+              direction="column"
+              justify="between"
+              gap="4"
+              my="6"
+              pt="6"
+              px="4"
+            >
               {withNotes && (
                 <Flex direction="column" gap="2">
                   <Heading as="h3">Notes</Heading>
                   {recipe.notes && recipe.notes.length > 0 ? (
                     <Flex direction="column" gap="4">
                       {recipe.notes.map((note, index) => (
-                        <RecipeNoteRow note={note} key={index} onDelete={handleDeleteNote} />
+                        <RecipeNoteRow
+                          note={note}
+                          key={index}
+                          onDelete={handleDeleteNote}
+                        />
                       ))}
                     </Flex>
                   ) : (
@@ -253,9 +325,7 @@ export function RecipeView({ recipeUuid = null, recipeData = null, withNotes = t
                         onSubmit={handleSubmitNote}
                       />
                     ) : (
-                      <Button
-                        onClick={() => setIsNoteFormOpen(true)}
-                      >
+                      <Button onClick={() => setIsNoteFormOpen(true)}>
                         Ajouter une note
                       </Button>
                     )}
@@ -265,27 +335,27 @@ export function RecipeView({ recipeUuid = null, recipeData = null, withNotes = t
               <Text as="div" mt="4" align="right">
                 {recipe.dateAdd && (
                   <Text as="time" className={styles.date}>
-                    Recette ajoutée le {new Date(recipe.dateAdd).toLocaleDateString('fr-FR', {
-                      day: 'numeric',
-                      month: 'long',
-                      year: 'numeric'
-                    })
-                    }
+                    Recette ajoutée le{" "}
+                    {new Date(recipe.dateAdd).toLocaleDateString("fr-FR", {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    })}
                     {recipe.dateModify &&
-                      `, modifiée le ${new Date(recipe.dateModify).toLocaleDateString('fr-FR', {
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric'
-                      })}`
-                    }
+                      `, modifiée le ${new Date(
+                        recipe.dateModify,
+                      ).toLocaleDateString("fr-FR", {
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                      })}`}
                   </Text>
                 )}
               </Text>
             </Flex>
           </>
-
         )}
       </LoadingWrapper>
-    </Box >
+    </Box>
   );
 }

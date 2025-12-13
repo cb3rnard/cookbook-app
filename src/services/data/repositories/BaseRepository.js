@@ -105,15 +105,6 @@ export class BaseRepository {
       const entityToStorage = update
         ? entity.toStorageUpdate()
         : entity.toStorage();
-      console.log(
-        "BaseRepository.save called with data:",
-        entityData,
-        "update:",
-        update,
-        "skipValidation:",
-        skipValidation,
-      );
-      console.log(entityToStorage);
       await this.table.save(entityToStorage, update);
       this.eventBus.emit("entity:saved", {
         endpoint: this.endpoint,

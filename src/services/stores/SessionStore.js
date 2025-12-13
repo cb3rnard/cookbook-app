@@ -45,6 +45,10 @@ export class SessionStore extends BaseStore {
     return this._state.autoSync;
   }
 
+  get lastSyncDate() {
+    return this._state.lastSyncDate;
+  }
+
   saveSession(user = {}, apiUrl = "") {
     if (!user.id || !apiUrl) {
       throw new Error("User and API URL are required to save the session.");

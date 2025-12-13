@@ -8,10 +8,14 @@ const countsModel = {
   loading: false,
   error: null,
   available: true,
+  lastCheck: null,
 };
 const initialState = {
   localCounts: countsModel,
   remoteCounts: countsModel,
+  // Map of remote dirty versions by UUID for quick lookup
+  // Structure: Map<uuid, {endpoint, uuid, dateReceived, dateDeleted}>
+  remoteDirtyVersions: new Map(),
 };
 
 export class DataStore extends BaseStore {

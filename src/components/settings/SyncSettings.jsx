@@ -1,7 +1,9 @@
 import { Notice } from "@components/ui/Notice";
-import { Box, Button, Flex, Heading, Strong, Text } from "@radix-ui/themes";
-import { useEffect, useMemo } from "react";
+import { Box, Button, Flex, Heading, Text, TextField } from "@radix-ui/themes";
+import { useMemo, useState } from "react";
 import { SyncProgress } from "../../components/sync/SyncProgress";
+import { CONFIG } from "../../config/config";
+import { useSettings } from "../../contexts";
 import { useApi } from "../../contexts/ApiContext";
 import { useData } from "../../contexts/DataContext";
 import { useRecipes } from "../../contexts/RecipesContext";
@@ -14,8 +16,12 @@ export function SyncSettings() {
   const { syncState, fullSync, incrementalSync, clearOperation } = useSync();
   const { syncing } = syncState;
   const { operation } = syncState;
-  const { localCounts, remoteCounts, refreshAllCounts } = useData();
+  const { localCounts, remoteCounts, fetchRemoteCounts } = useData();
   const { setNeedsRefresh } = useRecipes();
+  const { settings, setSetting } = useSettings();
+  const [syncRequested, setSyncRequested] = useState(false);
+
+  const needsSync = localCounts.hasChanges || remoteCounts.hasChanges;
 
   const lastSyncDateLocale = useMemo(() => {
     return session.lastSyncDate
@@ -23,55 +29,90 @@ export function SyncSettings() {
       : null;
   }, [session.lastSyncDate]);
 
-  // Refresh local and remote count on mount
-  useEffect(() => {
-    const fetchData = async () => {
-      await refreshAllCounts();
-    };
-    fetchData();
-  }, [refreshAllCounts]);
-
   const handleSync = async () => {
-    try {
-      console.log("Lancement de la synchronisation complète...");
-      const results = await fullSync(400);
-      setNeedsRefresh(Date.now());
-    } catch (error) {}
+    setSyncRequested(true);
+    await fullSync(400);
+    setNeedsRefresh(Date.now());
   };
 
   const handleIncrementalSync = async () => {
-    try {
-      const results = await incrementalSync(400);
-      setNeedsRefresh(Date.now());
-    } catch (error) {}
+    setSyncRequested(true);
+    await incrementalSync(400);
+    setNeedsRefresh(Date.now());
   };
 
-  const Errors = useMemo(() => {
-    if (!operation.completed) {
-      return null;
+  const handleCloseProgress = () => {
+    setSyncRequested(false);
+    clearOperation();
+  };
+
+  const handleSettingChange = async (e) => {
+    const { id, value } = e.target;
+    if (["syncDelayMinutes", "remoteDataRefreshMinutes"].includes(id)) {
+      let intValue = parseInt(value, 10);
+      if (!intValue || intValue < CONFIG.MIN_REFRESH_MINUTES) {
+        intValue = CONFIG.MIN_REFRESH_MINUTES;
+      }
+      await setSetting(id, intValue);
+      return;
     }
-    return operation.summary.errors.map((err, index) => (
-      <Box key={index}>
-        <Text as="p" size="2" color="red">
-          {err.message}
-        </Text>
-        {(err.step.entity || err.step.action) && (
-          <Text>
-            {err.step.entity && <Strong>{err.step.entity}</Strong>}
-            {err.step.entity && err.step.action && " | "}
-            {err.step.action}
-          </Text>
-        )}
-        {index < operation.summary.errors.length - 1 ? <br /> : null}
+    await setSetting(key, value);
+  };
+
+  const DelaySettings = () => {
+    return (
+      <Box asChild mt="6">
+        <form>
+          <Heading as="h3" size="3" mb="2">
+            Délais de synchronisation
+          </Heading>
+          <Flex gap="4">
+            {session.autoSync && (
+              <Box>
+                <Text as="label" htmlFor="syncDelayMinutes">
+                  Délai entre les synchronisations automatiques complètes
+                  (minutes)
+                </Text>
+                <TextField.Root
+                  id="syncDelayMinutes"
+                  help="Définissez le délai entre chaque synchronisation automatique. Valeur minimale : 5 minutes."
+                  size="2"
+                  value={settings.syncDelayMinutes || 5}
+                  type="number"
+                  min="5"
+                  onChange={handleSettingChange}
+                />
+              </Box>
+            )}
+            <Box>
+              <Text as="label" htmlFor="remoteDataRefreshMinutes">
+                Délai d'actualisation des données distantes (minutes)
+              </Text>
+              <TextField.Root
+                id="remoteDataRefreshMinutes"
+                label="Délai d'actualisation des données distantes"
+                description="Définissez la fréquence à laquelle l'application vérifie les modifications distantes. Valeur minimale : 5 minutes."
+                size="2"
+                value={
+                  settings.remoteDataRefreshMinutes ||
+                  CONFIG.DEFAULTS.remoteDataRefreshMinutes
+                }
+                type="number"
+                min={CONFIG.MIN_REFRESH_MINUTES}
+                onChange={handleSettingChange}
+              />
+            </Box>
+          </Flex>
+        </form>
       </Box>
-    ));
-  }, [operation.completed, operation.summary.errors]);
+    );
+  };
 
   return (
     <Flex className="settings__panel" direction="column" gap="2">
       <Heading as="h2">Synchronisation</Heading>
       <Flex direction="column" gap="4">
-        {session.lastSyncDateLocale ? (
+        {lastSyncDateLocale ? (
           <Text as="div" size="1" color="gray">
             Dernière synchronisation : {lastSyncDateLocale}
           </Text>
@@ -81,9 +122,9 @@ export function SyncSettings() {
           </Text>
         )}
 
-        {syncing || operation.completed ? (
+        {syncRequested ? (
           <>
-            <SyncProgress onClose={clearOperation} />
+            <SyncProgress onClose={handleCloseProgress} />
           </>
         ) : (
           <>
@@ -120,46 +161,53 @@ export function SyncSettings() {
             )}
 
             <SyncCountBoxes local={localCounts} remote={remoteCounts} />
-            {localCounts?.hasChanges || remoteCounts?.hasChanges ? (
-              <Notice
-                type="warning"
-                title="Des modifications n'ont pas été synchronisées"
-                message="Veuillez lancer une synchronisation pour mettre à jour les données."
-                size="2"
-              />
-            ) : (
-              localCounts?.all.length === 0 &&
-              remoteCounts?.all.length === 0 && (
-                <Notice
-                  type="info"
-                  title="Aucune donnée à synchroniser"
-                  message="Aucune recette trouvée localement ou sur l'API."
-                  size="2"
-                />
-              )
-            )}
-            {authenticated && (
-              <Flex gap="2" wrap="wrap">
+
+            {remoteCounts.lastCheck && (
+              <Flex gap="1">
+                <Text as="div" size="1" color="gray">
+                  Dernière actualisation :{" "}
+                  {new Date(remoteCounts.lastCheck).toLocaleString()}
+                </Text>
                 <Button
-                  className="settings__sync button"
-                  onClick={handleIncrementalSync}
+                  variant="ghost"
+                  size="1"
+                  onClick={async () => {
+                    await fetchRemoteCounts();
+                  }}
                   disabled={syncing}
                 >
-                  Synchroniser les données modifiées
-                </Button>
-                <Button
-                  className="settings__sync button"
-                  onClick={handleSync}
-                  variant="surface"
-                  disabled={syncing}
-                >
-                  Synchroniser toutes les données
+                  Actualiser les données distantes
                 </Button>
               </Flex>
             )}
+            {authenticated &&
+              (localCounts?.hasChanges || remoteCounts?.hasChanges) && (
+                <Flex gap="2" wrap="wrap">
+                  {needsSync && (
+                    <Button
+                      className="settings__sync button"
+                      onClick={handleIncrementalSync}
+                      disabled={syncing}
+                    >
+                      Synchroniser les données modifiées
+                    </Button>
+                  )}
+                  <Button
+                    className="settings__sync button"
+                    onClick={handleSync}
+                    variant="surface"
+                    disabled={syncing}
+                  >
+                    {session.lastSyncDate
+                      ? "Re-synchroniser toutes les données"
+                      : "Synchroniser toutes les données"}
+                  </Button>
+                </Flex>
+              )}
           </>
         )}
       </Flex>
+      {session.active && <DelaySettings />}
     </Flex>
   );
 }

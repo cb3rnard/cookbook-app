@@ -32,8 +32,8 @@ export class DataService {
 
     this.repositories = new Map();
     this.eventBus = EventBus.getInstance();
+    this.remoteDataInterval = null;
     this.connectionStore = new ConnectionStore();
-
     this.sessionStore = this.connectionStore.state.session;
 
     this.dataStore = new DataStore();
@@ -180,42 +180,62 @@ export class DataService {
 
       const dirtyVersionsEndpoints =
         await this.apiService.operations.global.getDirtyEntitiesVersions();
-      const dirtyVersions = [];
+
+      // Filter and count dirty versions, excluding already synced entities
+      const filteredDirtyVersions = [];
 
       for (const [endpoint, versions] of Object.entries(
         dirtyVersionsEndpoints,
       )) {
         counts.deleted[endpoint] = 0;
         counts.modified[endpoint] = 0;
+
         for (const version of versions) {
-          if (version.dateDeleted) {
-            counts.deleted[endpoint]++;
-          } else {
-            counts.modified[endpoint]++;
+          // Add endpoint to version object
+          const versionWithEndpoint = { ...version, endpoint };
+
+          // Check if already synced
+          const repository = this.repositories.get(endpoint);
+          const isSynced = repository
+            ? await repository.isSynced(version.uuid, version.dateReceived)
+            : false;
+
+          if (!isSynced) {
+            // Count only non-synced entities
+            if (version.dateDeleted) {
+              counts.deleted[endpoint]++;
+            } else {
+              counts.modified[endpoint]++;
+            }
+            // Keep in filtered list
+            filteredDirtyVersions.push(versionWithEndpoint);
           }
-          dirtyVersions.push(version);
         }
       }
-      const adjustedCounts = await this._excludeSyncedFromDirtyCounts(
-        counts,
-        dirtyVersions,
-      );
 
-      adjustedCounts.hasChanges =
-        adjustedCounts.modified.recipes > 0 ||
-        adjustedCounts.modified.ingredients > 0 ||
-        adjustedCounts.modified.types > 0 ||
-        adjustedCounts.deleted.recipes > 0 ||
-        adjustedCounts.deleted.ingredients > 0 ||
-        adjustedCounts.deleted.types > 0;
+      // Store filtered dirty versions in DataStore for quick lookup
+      const dirtyVersionsMap = new Map();
+      filteredDirtyVersions.forEach((version) => {
+        dirtyVersionsMap.set(version.uuid, version);
+      });
+
+      counts.hasChanges =
+        counts.modified.recipes > 0 ||
+        counts.modified.ingredients > 0 ||
+        counts.modified.types > 0 ||
+        counts.deleted.recipes > 0 ||
+        counts.deleted.ingredients > 0 ||
+        counts.deleted.types > 0;
 
       this.dataStore.setState({
         remoteCounts: {
-          ...adjustedCounts,
+          ...counts,
           loading: false,
           error: null,
           available: true,
+          lastCheck: new Date(),
         },
+        remoteDirtyVersions: dirtyVersionsMap,
       });
     } catch (error) {
       console.error("Failed to get remote counts:", error);
@@ -235,32 +255,5 @@ export class DataService {
         },
       });
     }
-  }
-
-  // Iterates through
-  async _excludeSyncedFromDirtyCounts(counts, remoteDirtyVersions) {
-    const adjustedCounts = { ...counts };
-    for (const remoteVersion of remoteDirtyVersions.entries()) {
-      const repository = this.repositories.get(remoteVersion.endpoint);
-      if (!repository) continue;
-      const isSynced = await repository.isSynced(
-        remoteVersion.uuid,
-        remoteVersion.dateReceived,
-      );
-      if (isSynced) {
-        if (remoteVersion.dateDeleted) {
-          adjustedCounts.deleted[remoteVersion.endpoint] = Math.max(
-            0,
-            adjustedCounts.deleted[remoteVersion.endpoint] - 1,
-          );
-        } else {
-          adjustedCounts.modified[remoteVersion.endpoint] = Math.max(
-            0,
-            adjustedCounts.modified[remoteVersion.endpoint] - 1,
-          );
-        }
-      }
-    }
-    return adjustedCounts;
   }
 }

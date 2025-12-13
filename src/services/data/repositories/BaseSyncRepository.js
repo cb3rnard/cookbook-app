@@ -25,9 +25,10 @@ export class BaseSyncRepository extends BaseRepository {
       // 2. Si sync demandée et conditions remplies, demander sync via EventBus
       if (this.canSync && sync === true) {
         try {
-          const syncedEntity = await this._maybeSyncEntity(
-            localEntity,
-            hydrate,
+          const syncedEntity = await this._requestEntitySync(
+            localEntity.uuid,
+            localEntity.isDirty,
+            sync === "remoteOnly",
           );
 
           return syncedEntity || localEntity;
@@ -44,7 +45,7 @@ export class BaseSyncRepository extends BaseRepository {
     }
   }
 
-  async getAll(options = {}, hydrate = {}, sync = true) {
+  async getAll(options = {}, hydrate = {}) {
     try {
       // Local d'abord
       const localEntitiesData = await this.table.getAll(options);
@@ -54,14 +55,6 @@ export class BaseSyncRepository extends BaseRepository {
         ),
       );
 
-      if (this.canSync && sync) {
-        this._backgroundSyncAll().catch((err) => {
-          console.warn(
-            "Background sync all failed (sync disabled or auth required):",
-            err,
-          );
-        });
-      }
       return localEntities;
     } catch (error) {
       console.error(
@@ -138,7 +131,7 @@ export class BaseSyncRepository extends BaseRepository {
       if (!synced && this.canSync) {
         try {
           // Sync en arrière-plan
-          const syncedEntity = await this._requestEntitySync(entity.uuid);
+          const syncedEntity = await this._requestEntitySync(entity.uuid, true);
           return syncedEntity || savedEntity;
         } catch (error) {
           console.warn("Background sync request failed:", error);
@@ -248,40 +241,18 @@ export class BaseSyncRepository extends BaseRepository {
   }
 
   /**
-   * Sync intelligente d'une entité si dirty ou synchronisée il y a plus de 1h
-   * @private
-   */
-  async _maybeSyncEntity(entityData) {
-    if (
-      !entityData.isDirty &&
-      (!entityData.lastSyncDate ||
-        Date.now() - new Date(entityData.lastSyncDate) < 3600000)
-    ) {
-      // Pas besoin de sync
-      return entityData;
-    }
-    try {
-      return await this._requestEntitySync(entityData.uuid);
-    } catch (error) {
-      return null;
-    }
-  }
-
-  /**
    * Demande une sync d'entité via EventBus
    * @private
    */
-  async _requestEntitySync(uuid) {
+  async _requestEntitySync(uuid, isDirty = false, remoteOnly = false) {
     return new Promise((resolve) => {
       this.eventBus.emit("sync:request:entity", {
         endpoint: this.endpoint,
         uuid,
+        isDirty,
+        remoteOnly,
         callback: resolve,
       });
     });
-  }
-
-  async _backgroundSyncAll() {
-    // Pour plus tard - sync intelligent basé sur dirty flags
   }
 }

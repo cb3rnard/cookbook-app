@@ -7,41 +7,60 @@ export class SyncImporter {
     this.entitiesToImport = entitiesToImport;
     this.syncService = syncService;
     this.repositories = syncService.repositories;
+    this.syncStore = syncService.syncStore;
     this._emitSyncEvent = syncService._emitSyncEvent.bind(syncService);
   }
 
   async import() {
     const repository = this.repositories.get(this.endpoint);
     const entitiesToImport = this.entitiesToImport;
-    if (entitiesToImport.length > 0) {
-      for (const entityData of entitiesToImport) {
-        try {
-          await this._beforeImport(repository, entityData);
-          const dateReceived = entityData.dateReceived || null;
 
-          const savedEntity = await repository.save(
-            entityData,
-            false,
-            dateReceived,
-            true,
-          );
-          this.results.success++;
-          this._emitSyncEvent("imported", {
-            endpoint: this.endpoint,
-            entity: savedEntity,
-          });
-        } catch (error) {
-          console.error(`Error syncing entity type ${this.endpoint}:`, error);
-          this.results.errors.push(
-            `Import failed for ${this.endpoint} ${entityData.uuid}: ${error.message}`,
-          );
-          this.results.failed++;
+    try {
+      if (entitiesToImport.length > 0) {
+        for (const entityData of entitiesToImport) {
+          try {
+            await this._beforeImport(repository, entityData);
+            const dateReceived = entityData.dateReceived || null;
+
+            const savedEntity = await repository.save(
+              entityData,
+              false,
+              dateReceived,
+              true,
+            );
+            this.results.success++;
+            this._emitSyncEvent("imported", {
+              endpoint: this.endpoint,
+              entity: savedEntity,
+            });
+          } catch (error) {
+            // Entity-level error: log and continue with next entity
+            console.error(
+              `Import failed for ${this.endpoint} ${entityData.uuid}:`,
+              error,
+            );
+            this.results.errors.push(`${entityData.uuid}: ${error.message}`);
+            this.results.failed++;
+          }
         }
       }
-    }
-    return this.results;
-  }
 
+      // Update SyncStore with import results
+      this.syncStore.setEndpointImportResults(this.endpoint, this.results);
+    } catch (error) {
+      // Critical error: repository access failed, Dexie error, etc.
+      console.error(
+        `Critical error during import for ${this.endpoint}:`,
+        error,
+      );
+      this.syncStore.setEndpointCriticalError(
+        this.endpoint,
+        `Import critical failure: ${error.message}`,
+      );
+      this.syncStore.setEndpointImportResults(this.endpoint, this.results);
+      throw error;
+    }
+  }
   async _beforeImport(repository, entityData) {
     const endpoint = repository.endpoint;
 

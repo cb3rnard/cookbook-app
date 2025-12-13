@@ -14,6 +14,7 @@ export class SyncExporter {
     this.endpoint = endpoint;
     this.entitiesToExport = entitiesToExport;
     this.repositories = syncService.repositories;
+    this.syncStore = syncService.syncStore;
     this._emitSyncEvent = syncService._emitSyncEvent.bind(syncService);
     this.apiService = syncService.apiService;
   }
@@ -23,7 +24,8 @@ export class SyncExporter {
     const entitiesToExport = this.entitiesToExport;
 
     if (entitiesToExport.length === 0) {
-      return this.results;
+      this.syncStore.setEndpointExportResults(this.endpoint, this.results);
+      return;
     }
 
     try {
@@ -36,17 +38,22 @@ export class SyncExporter {
       // This can modify exports counters (e.g., image upload failures)
       await this._afterExport(this.endpoint, entitiesToExport, exportResults);
 
-      return this.results;
+      // Update SyncStore with export results
+      this.syncStore.setEndpointExportResults(this.endpoint, this.results);
     } catch (error) {
-      console.error("Error exporting entities:", error);
-      results.errors.push(
-        `Export failed for ${this.endpoint}: ${error.message}`,
+      // Critical error: API unavailable, network error, etc.
+      console.error(
+        `Critical error during export for ${this.endpoint}:`,
+        error,
       );
-      return this.results;
+      this.syncStore.setEndpointCriticalError(
+        this.endpoint,
+        `Export critical failure: ${error.message}`,
+      );
+      this.syncStore.setEndpointExportResults(this.endpoint, this.results);
+      throw error;
     }
-  }
-
-  /**
+  } /**
    * Exports a list of entities to the API in batches
    * Handles batch failures by retrying individual entities
    * @private
@@ -285,14 +292,11 @@ export class SyncExporter {
     // From syncedEntities map this.syncedEntities
     if (this.syncedEntities.size === 0) return;
     for (const [uuid, dateReceived] of this.syncedEntities.entries()) {
+      console.log(`SyncExporter: updating sync date for ${endpoint} ${uuid}`);
       await repository.synced(uuid, dateReceived);
       this._emitSyncEvent("synced", { endpoint, uuid });
       DebugService.log(
-        [
-          "SyncService: updated local entity after export",
-          endpoint,
-          result.uuid,
-        ],
+        ["SyncService: updated local entity after export", endpoint, uuid],
         "sync",
       );
     }

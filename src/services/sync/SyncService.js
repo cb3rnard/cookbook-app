@@ -1,5 +1,6 @@
 import { DebugService } from "../DebugService";
 import { ConnectionStore } from "../stores/ConnectionStore";
+import { DataStore } from "../stores/DataStore";
 import { SessionStore } from "../stores/SessionStore";
 import { SyncStore } from "../stores/SyncStore";
 import { EventBus } from "../utils/EventBus";
@@ -7,30 +8,6 @@ import { delayExecution } from "../utils/GlobalUtils";
 import { SyncConflictsService } from "./SyncConflictsService";
 import { SyncExporter } from "./SyncExporter";
 import { SyncImporter } from "./SyncImporter";
-
-const entitiesSyncResultModel = {
-  success: 0,
-  failed: 0,
-  errors: [],
-};
-
-const endpointSyncResultsModel = {
-  import: { ...entitiesSyncResultModel },
-  export: { ...entitiesSyncResultModel },
-};
-
-const initialFullSyncResults = {
-  recipes: { ...endpointSyncResultsModel },
-  ingredients: { ...endpointSyncResultsModel },
-  types: { ...endpointSyncResultsModel },
-  totalFailed: 0,
-  totalImported: 0,
-  totalErrors: 0,
-  errors: [],
-  allFailed: false,
-  success: false,
-  error: null,
-};
 
 export class SyncService {
   /**
@@ -46,6 +23,7 @@ export class SyncService {
     this.connectionStore = new ConnectionStore();
     this.sessionStore = new SessionStore();
     this.syncStore = new SyncStore();
+    this.dataStore = new DataStore();
     this._setupListeners();
     SyncService._instance = this;
   }
@@ -63,17 +41,35 @@ export class SyncService {
    * Entity sync request listener
    */
   async _syncRequestEntityListener(data) {
-    const { endpoint, uuid, callback } = data;
+    const { endpoint, uuid, isDirty = false, remoteOnly, callback } = data;
     DebugService.log(
-      ["SyncService: entity sync requested", { endpoint, uuid }],
+      ["SyncService: entity sync requested", { endpoint, uuid, isDirty }],
       "sync",
     );
 
     try {
       // Ends if not authenticated
       if (!this.connectionStore.authenticated) {
-        return null;
+        callback(null);
+        return;
       }
+
+      // Check if entity needs sync (dirty locally OR dirty on remote)
+      const remoteDirtyVersions = this.dataStore.state.remoteDirtyVersions;
+      const isDirtyOnRemote = remoteDirtyVersions.has(uuid);
+
+      // Early exit if remote only and not dirty on remote
+      if (remoteOnly && !isDirtyOnRemote) {
+        callback(null);
+        return;
+      }
+
+      const needsSync = isDirty || (isDirtyOnRemote && remoteOnly);
+      if (!needsSync) {
+        callback(null);
+        return;
+      }
+
       const syncedEntity = await this._syncEntity(endpoint, uuid);
       callback(syncedEntity);
     } catch (error) {
@@ -123,7 +119,7 @@ export class SyncService {
       console.warn("SyncService: sync aborted - not authenticated");
       return;
     }
-    const results = { ...initialFullSyncResults };
+
     try {
       this.syncStore.startOperation(
         incremental ? "incrementalSync" : "fullSync",
@@ -134,56 +130,38 @@ export class SyncService {
 
       for (const endpoint of endpoints) {
         this.syncStore.updateOperation(endpoint, "Synchronisation");
-        const endpointSyncResults = await this._syncEndpoint(
+        await this._syncEndpoint(
           this.repositories.get(endpoint),
           conflictStrategy,
           delay,
           incremental,
         );
-        results[endpoint] = endpointSyncResults;
-        results.totalErrors +=
-          endpointSyncResults.import.errors.length +
-          endpointSyncResults.export.errors.length;
-        results.totalFailed +=
-          endpointSyncResults.import.failed + endpointSyncResults.export.failed;
-        results.totalSuccess +=
-          endpointSyncResults.import.success +
-          endpointSyncResults.export.success;
       }
 
-      results.allFailed = results.totalFailed > 0 && results.totalSuccess === 0;
-      results.success = results.totalFailed === 0;
-
-      if (results.success) {
+      const syncSuccess = this.syncStore.finishOperation();
+      if (syncSuccess) {
         this.sessionStore.setLastSyncDate(new Date());
       }
 
-      this.syncStore.finishOperation(true, results);
-      this._emitSyncEvent("completed", results);
       this.eventBus.emit(
         incremental ? "incrementalSync:completed" : "fullSync:completed",
-        results,
       );
-      // await this.getCountsAndDirty();
-      return results;
     } catch (error) {
       console.error("Sync failed:", error);
-      results.success = false;
-      results.error = error.message;
-      this.syncStore.finishOperation(false, results);
-      this.syncStore.addOperationError(error);
-
+      this.syncStore.addOperationError(error.message);
+      this.syncStore.finishOperation();
       this._emitSyncEvent("error", error);
       throw error;
     }
   }
 
   /**
-   * Synchronise une entité spécifique (utilisée par EventBus et méthodes internes)
-   * @param {string} endpoint - Type d'entité (recipes, ingredients, etc.)
-   * @param {string} uuid - UUID de l'entité
-   * @param {object} options - Options incluant hydrate, conflictStrategy, etc.
-   * @returns {Promise<object>} L'entité synchronisée
+   * Synchronises a single entity by UUID
+   * @private
+   * @param {string} endpoint - Entity endpoint
+   * @param {string} entityUuid - Entity UUID
+   * @param {string} conflictStrategy - Conflict resolution strategy
+   * @returns {Promise<Object>} The synced entity
    */
   async _syncEntity(
     endpoint,
@@ -253,13 +231,12 @@ export class SyncService {
         { withAll: true, construct: true },
         false,
       );
-      this.syncStore.finishOperation(true, syncResults);
+      this.syncStore.finishOperation();
 
       return syncedEntity;
     } catch (error) {
-      results.error = error.message;
-      this.syncStore.addOperationError(error);
-      this.syncStore.finishOperation(false, results);
+      this.syncStore.addOperationError(error.message);
+      this.syncStore.finishOperation();
       this._emitSyncEvent("error", error);
       throw error;
     }
@@ -282,31 +259,78 @@ export class SyncService {
     delay,
     incremental = false,
   ) {
-    const results = { ...endpointSyncResultsModel };
     const endpoint = repository.endpoint;
 
     try {
       let localEntities, remoteEntities;
-      if (incremental) {
-        localEntities = await repository.getDirty(
-          {},
-          { withAll: true, construct: true },
+
+      // Fetch local entities
+      try {
+        if (incremental) {
+          localEntities = await repository.getDirty(
+            {},
+            { withAll: true, construct: true },
+          );
+        } else {
+          localEntities = await repository.getAll(
+            {},
+            { withAll: true, construct: true },
+          );
+        }
+      } catch (error) {
+        // Critical: Can't read local data
+        console.error(`Critical error fetching local ${endpoint}:`, error);
+        this.syncStore.setEndpointCriticalError(
+          endpoint,
+          `Failed to fetch local data: ${error.message}`,
         );
-        remoteEntities =
-          await this.apiService.operations.entity.getAllSince(endpoint);
-      } else {
-        localEntities = await repository.getAll(
-          {},
-          { withAll: true, construct: true },
+        this.syncStore.addOperationError(
+          `${endpoint}: Failed to fetch local data`,
         );
-        remoteEntities =
-          await this.apiService.operations.entity.getAll(endpoint);
+        return; // Skip this endpoint, continue with next
+      }
+
+      // Fetch remote entities
+      try {
+        if (incremental) {
+          remoteEntities =
+            await this.apiService.operations.entity.getAllSince(endpoint);
+
+          // Filter out already synced entities to avoid re-importing
+          // An entity is already synced if local lastSyncDate >= remote dateReceived
+          const filteredRemoteEntities = [];
+          for (const remoteEntity of remoteEntities) {
+            const isSynced = await repository.isSynced(
+              remoteEntity.uuid,
+              remoteEntity.dateReceived,
+            );
+            if (!isSynced) {
+              filteredRemoteEntities.push(remoteEntity);
+            }
+          }
+          remoteEntities = filteredRemoteEntities;
+        } else {
+          remoteEntities =
+            await this.apiService.operations.entity.getAll(endpoint);
+        }
+      } catch (error) {
+        // Critical: API unavailable or network error
+        console.error(`Critical error fetching remote ${endpoint}:`, error);
+        this.syncStore.setEndpointCriticalError(
+          endpoint,
+          `Failed to fetch remote data: ${error.message}`,
+        );
+        this.syncStore.addOperationError(
+          `${endpoint}: Failed to fetch remote data`,
+        );
+        return; // Skip this endpoint, continue with next
       }
 
       this.syncStore.updateOperation(
         endpoint,
         "Détection et résolution des conflits",
       );
+
       const resolution = SyncConflictsService.detectConflicts(
         endpoint,
         localEntities,
@@ -314,39 +338,52 @@ export class SyncService {
         conflictStrategy,
       );
 
-      return await this._syncResolution(repository, resolution, delay);
-    } catch (error) {
-      console.error(`Error syncing entity type ${endpoint}:`, error);
-      results.errors.push(`Sync failed for ${endpoint}: ${error.message}`);
-      this.syncStore.addOperationError(
-        `Sync failed for ${endpoint}: ${error.message}`,
+      // Set counts and conflicts in SyncStore
+      this.syncStore.setEndpointCounts(
+        endpoint,
+        resolution.toLocal.length,
+        resolution.toRemote.length,
       );
-      return results;
+
+      this.syncStore.setEndpointConflicts(endpoint, resolution.conflicts || []);
+
+      try {
+        await this._syncResolution(repository, resolution, delay);
+      } catch (error) {
+        // Error during import/export, already handled by SyncImporter/SyncExporter
+        console.error(`Error during sync resolution for ${endpoint}:`, error);
+        this.syncStore.addOperationError(`${endpoint}: ${error.message}`);
+        // Continue with next endpoint
+      }
+    } catch (error) {
+      // Unexpected error
+      console.error(`Unexpected error syncing ${endpoint}:`, error);
+      this.syncStore.setEndpointCriticalError(
+        endpoint,
+        `Unexpected error: ${error.message}`,
+      );
+      this.syncStore.addOperationError(`${endpoint}: Unexpected error`);
     }
   }
 
   async _syncResolution(repository, resolution, delay) {
-    const results = { ...endpointSyncResultsModel };
     const endpoint = repository.endpoint;
 
     await delayExecution(delay);
 
     // Import remote entities
     this.syncStore.updateOperation(endpoint, "Import");
-
     const syncImporter = new SyncImporter(endpoint, resolution.toLocal, this);
-    results.import = await syncImporter.import();
+    await syncImporter.import();
 
     await delayExecution(delay);
 
     // Export local entities
     this.syncStore.updateOperation(endpoint, "Export");
     const syncExporter = new SyncExporter(endpoint, resolution.toRemote, this);
-    results.export = await syncExporter.export();
+    await syncExporter.export();
 
     await delayExecution(delay);
-
-    return results;
   }
 
   /**

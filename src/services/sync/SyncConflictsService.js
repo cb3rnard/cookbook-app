@@ -118,19 +118,15 @@ export class SyncConflictsService {
         } else if (resolved.winner === "remote") {
           keepedUuid = remoteEntity.uuid;
           resolution.toLocal.push(remoteEntity);
-        } else {
-          resolution.conflicts.push({
-            local: localEntity,
-            remote: remoteEntity,
-            reason: resolved.reason,
-          });
         }
-        this.syncStore?.addOperationConflict(
-          "version",
-          endpoint,
-          resolved.winner,
-          keepedUuid,
-        );
+        resolution.conflicts.push({
+          type: "version",
+          endpoint: endpoint,
+          winner: resolved.winner,
+          reason: resolved.reason,
+          localUuid: localEntity.uuid,
+          remoteUuid: remoteEntity.uuid,
+        });
       }
     });
 
@@ -138,6 +134,7 @@ export class SyncConflictsService {
     toLocal.forEach((remoteEntity) => {
       const localEntity = toRemote.find((le) => le.uuid === remoteEntity.uuid);
       if (!localEntity) {
+        // No local entity found, add to import list
         resolution.toLocal.push(remoteEntity);
       }
     });
