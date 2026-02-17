@@ -3,12 +3,13 @@
    ========================================================================== */
 
 /* Import design tokens & variables */
+
 /* @import "@radix-ui/themes/styles.css"; */
-@import './base/tokens.css';
-@import './base/global.css';
-@import './base/utilities.css';
+@import url('./base/tokens.css');
+@import url('./base/global.css');
+@import url('./base/utilities.css');
 
 /* Import component styles */
-@import './components/Button.css';
-@import './components/Dialog.css';
-@import './components/Forms.css';
+@import url('./components/Button.css');
+@import url('./components/Dialog.css');
+@import url('./components/Forms.css');

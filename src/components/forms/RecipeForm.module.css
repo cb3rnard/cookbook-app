@@ -4,11 +4,11 @@
 
 .header {
   z-index: 1;
+  padding: var(--spacing-lg);
   border-bottom: var(--border-width) solid var(--color-border);
   background-color: var(--color-background);
-  padding: var(--spacing-lg);
 
-  @media (min-width: 576px) {
+  @media (width >= 576px) {
     position: sticky;
     top: 0;
     width: 100%;
@@ -23,14 +23,17 @@
 .step-number {
   display: flex;
   flex-shrink: 0;
-  justify-content: center;
   align-items: center;
-  margin-top: var(--spacing-xs);
-  border-radius: 50%;
-  background-color: var(--color-primary);
+  justify-content: center;
+
   width: 24px;
   height: 24px;
-  color: white;
-  font-weight: 600;
+  margin-top: var(--spacing-xs);
+  border-radius: 50%;
+
   font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: white;
+
+  background-color: var(--color-primary);
 }

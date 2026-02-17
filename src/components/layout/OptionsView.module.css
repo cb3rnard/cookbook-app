@@ -1,0 +1,21 @@
+/* =================================================
+   OPTIONS PANEL
+   ================================================= */
+
+.tabs {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+
+  height: 90vh;
+  max-height: 100%;
+}
+
+.tabsList {
+  flex: 0 0 auto;
+}
+
+.tabsContents {
+  overflow: auto;
+  max-height: 100%;
+}

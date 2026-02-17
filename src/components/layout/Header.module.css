@@ -4,44 +4,45 @@
 
 .header {
   z-index: var(--z-dropdown);
+  width: 100%;
   border-bottom: 1px solid var(--gray-6);
   background-color: var(--color-surface);
-  width: 100%;
 
-  @media (min-width: 576px) {
+  @media (width >= 576px) {
     position: sticky;
     top: 0;
   }
 }
 
 .storageStatus {
-  border-radius: var(--radius-2);
   padding: var(--space-1) var(--space-2);
-  font-weight: 500;
+  border-radius: var(--radius-2);
   font-size: var(--font-size-1);
+  font-weight: 500;
 }
 
 .storageStatusPersistent {
   border: 1px solid var(--green-7);
-  background-color: var(--green-3);
   color: var(--green-11);
+  background-color: var(--green-3);
 }
 
 .storageStatusTemporary {
   border: 1px solid var(--orange-7);
-  background-color: var(--orange-3);
   color: var(--orange-11);
+  background-color: var(--orange-3);
 }
 
 .syncIndicator {
-  animation: rotate 1s linear infinite;
   border-radius: 50%;
+  animation: rotate 1s linear infinite;
 }
 
 @keyframes rotate {
   0% {
     transform: rotate(0deg);
   }
+
   100% {
     transform: rotate(360deg);
   }

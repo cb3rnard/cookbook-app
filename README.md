@@ -72,7 +72,6 @@ src/
 ├── hooks/              # Custom React hooks
 │   ├── useObservableState.js  # Subscribe to observable stores
 │   ├── usePwaInstall.js       # PWA installation
-│   └── useDebug.js            # Debug utilities
 ├── models/             # Data models
 │   ├── entities/       # Entity classes (Recipe, Ingredient, Type, Image)
 │   └── tables/         # Dexie table wrappers (RecipeTable, etc.)
@@ -169,7 +168,7 @@ Configure API endpoint in the app settings or via:
 
 ```javascript
 // Default API base URL
-const API_URL = "https://your-api-server.com";
+const API_URL = 'https://your-api-server.com';
 ```
 
 ## 🔧 Configuration
@@ -304,7 +303,7 @@ The app syncs with a REST API following these conventions:
 Enable debug logging in settings:
 
 ```javascript
-DebugService.log(["message", data], "category");
+DebugService.log(['message', data], 'category');
 ```
 
 Categories: `sync`, `api`, `data`, `storage`

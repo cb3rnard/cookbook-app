@@ -8,9 +8,9 @@
 
 .title {
   margin: 0;
-  color: var(--color-text);
-  font-weight: 600;
   font-size: var(--font-size-7);
+  font-weight: 600;
+  color: var(--color-text);
 }
 
 .container {
@@ -21,18 +21,20 @@
 
 /* Loading State */
 .loading {
+  background-color: var(--accent-2);
   animation: gradient 2.5s ease-in-out infinite;
   animation-delay: 0;
-  background-color: var(--accent-2);
 }
 
 @keyframes gradient {
   0% {
     background-color: var(--accent-3);
   }
+
   50% {
     background-color: var(--iris-7);
   }
+
   100% {
     background-color: var(--accent-3);
   }
@@ -45,20 +47,29 @@
 }
 
 .loadingDot {
-  animation: loading-bounce 1.4s ease-in-out both infinite;
+  width: 0.75rem;
+  height: 0.75rem;
   border-radius: 50%;
+
   background-color: var(--accent-10);
-  width: .75rem;
-  height: .75rem;
+
+  animation: loading-bounce 1.4s ease-in-out both infinite;
 }
 
-.loadingDot:nth-child(1) { animation-delay: -0.32s; }
-.loadingDot:nth-child(2) { animation-delay: -0.16s; }
+.loadingDot:nth-child(1) {
+  animation-delay: -0.32s;
+}
+.loadingDot:nth-child(2) {
+  animation-delay: -0.16s;
+}
 
 @keyframes loading-bounce {
-  0%, 80%, 100% {
+  0%,
+  80%,
+  100% {
     transform: scale(0);
   }
+
   40% {
     transform: scale(1);
   }
@@ -71,21 +82,21 @@
 }
 
 .emptyIcon {
-  opacity: 0.6;
   margin-bottom: var(--space-3);
   font-size: 4rem;
+  opacity: 0.6;
 }
 
 .emptyTitle {
   margin: 0 0 var(--space-2) 0;
-  color: var(--color-text);
-  font-weight: 600;
   font-size: var(--font-size-6);
+  font-weight: 600;
+  color: var(--color-text);
 }
 
 .emptyDescription {
   margin: 0;
-  color: var(--gray-11);
   font-size: var(--font-size-3);
   line-height: 1.6;
+  color: var(--gray-11);
 }

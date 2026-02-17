@@ -12,7 +12,7 @@
   --spacing-xxl: 48px;
 
   /* Typography */
-  --font-family-primary: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  --font-family-primary: inter, system-ui, avenir, helvetica, arial, sans-serif;
   --font-size-xs: 0.75rem;
   --font-size-sm: 0.875rem;
   --font-size-md: 1rem;
@@ -28,9 +28,9 @@
   --border-width: 1px;
 
   /* Shadows */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 5%);
+  --shadow-md: 0 4px 6px rgb(0 0 0 / 10%);
+  --shadow-lg: 0 10px 15px rgb(0 0 0 / 10%);
 
   /* Transitions */
   --transition-fast: 0.15s ease;
@@ -41,7 +41,7 @@
   --z-dropdown: 1000;
   --z-modal: 2000;
   --z-tooltip: 3000;
-  
+
   .radix-themes {
     /* Colors */
     --color-primary: #646cff;
@@ -49,29 +49,33 @@
     --color-secondary: #1a1a1a;
     --color-success: #10b981;
     --color-success-light: #e6fbf4;
-    --color-overlay: var(--black-a6, rgba(0, 0, 0, 0.6));
-    --color-text-muted: var(--gray-9, #9ca3af); 
+    --color-overlay: var(--black-a6, rgb(0 0 0 / 60%));
+    --color-text-muted: var(--gray-9, #9ca3af);
     --color-warning: #f59e0b;
     --color-warning-light: #fef3c7;
     --color-danger: #ef4444;
     --color-danger-light: #fee2e2;
-    --color-border: var(--gray-a6, rgba(0, 0, 0, 0.1));
+    --color-border: var(--gray-a6, rgb(0 0 0 / 10%));
   }
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     /* --color-surface: var(--gray-1, #1e1e1e); */
-    --color-border: var(--white-a6, rgba(255, 255, 255, 0.1));
+    --color-border: var(--white-a6, rgb(255 255 255 / 10%));
+
     /*
     --color-background: #121212;
     --color-surface: #1e1e1e;
     --color-text: rgba(255, 255, 255, 0.87); */
+
     /* --color-text-muted: rgba(255, 255, 255, 0.6); */
+
     /* --color-border: rgba(255, 255, 255, 0.1); */
+
     /* --color-secondary: #1e1e1e; */
     .radix-themes {
-      --color-overlay: var(--white-a6, rgba(0, 0, 0, 0.6));
+      --color-overlay: var(--white-a6, rgb(0 0 0 / 60%));
     }
   }
 }
@@ -81,21 +85,26 @@
    ========================================================================== */
 
 @define-mixin button-base {
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
-  gap: var(--spacing-sm);
-  transition: all var(--transition-normal);
   cursor: pointer;
-  outline: none;
+
+  display: inline-flex;
+  gap: var(--spacing-sm);
+  align-items: center;
+  justify-content: center;
+
+  padding: var(--spacing-sm) var(--spacing-md);
   border: var(--border-width) solid transparent;
   border-radius: var(--border-radius-md);
-  padding: var(--spacing-sm) var(--spacing-md);
-  font-weight: 500;
-  font-size: var(--font-size-md);
-  line-height: 1.5;
+
   font-family: var(--font-family-primary);
+  font-size: var(--font-size-md);
+  font-weight: 500;
+  line-height: 1.5;
   text-decoration: none;
+
+  outline: none;
+
+  transition: all var(--transition-normal);
 
   &:focus-visible {
     outline: 2px solid var(--color-primary);
@@ -103,17 +112,19 @@
   }
 
   &:disabled {
-    opacity: 0.6;
     cursor: not-allowed;
+    opacity: 0.6;
   }
 }
 
 @define-mixin card-base {
-  transition: box-shadow var(--transition-normal);
-  box-shadow: var(--shadow-sm);
   border: var(--border-width) solid var(--color-border);
   border-radius: var(--border-radius-lg);
+
   background-color: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+
+  transition: box-shadow var(--transition-normal);
 
   &:hover {
     box-shadow: var(--shadow-md);
@@ -121,22 +132,25 @@
 }
 
 @define-mixin input-base {
-  transition: border-color var(--transition-normal);
+  width: 100%;
+  padding: var(--spacing-sm) var(--spacing-md);
   border: var(--border-width) solid var(--color-border);
   border-radius: var(--border-radius-md);
-  background-color: var(--color-surface);
-  padding: var(--spacing-sm) var(--spacing-md);
-  width: 100%;
-  color: var(--color-text);
-  font-size: var(--font-size-md);
-  font-family: var(--font-family-primary);
 
-  &:focus {
-    outline: none;
-    border-color: var(--color-primary);
-  }
+  font-family: var(--font-family-primary);
+  font-size: var(--font-size-md);
+  color: var(--color-text);
+
+  background-color: var(--color-surface);
+
+  transition: border-color var(--transition-normal);
 
   &::placeholder {
     color: var(--color-text-muted);
+  }
+
+  &:focus {
+    border-color: var(--color-primary);
+    outline: none;
   }
 }

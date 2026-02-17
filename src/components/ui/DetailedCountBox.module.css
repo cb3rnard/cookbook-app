@@ -1,0 +1,39 @@
+.hasChanges {
+  position: relative;
+}
+
+.front {
+  transform: perspective(400px) rotateY(0deg);
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+
+  transition: transform 0.6s ease;
+}
+
+.back {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform: perspective(400px) rotateY(-179.9deg);
+
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-4);
+
+  backface-visibility: hidden;
+  background-color: var(--orange-3);
+
+  transition: transform 0.6s ease;
+}
+
+.hasChanges:hover .front {
+  transform: perspective(400px) rotateY(179.9deg);
+}
+
+.hasChanges:hover .back {
+  transform: perspective(400px) rotateY(0deg);
+
+  /* background-color: #000; */
+}

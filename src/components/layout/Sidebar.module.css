@@ -7,50 +7,61 @@
   top: 0;
   left: 0;
   transform: translateX(-100%);
-  transition: transform var(--transition-normal);
-  border-right: 1px solid var(--gray-6);
-  background-color: var(--color-background);
+
+  overflow-y: auto;
+
   width: 300px;
   height: 100vh;
-  overflow-y: auto;
+  border-right: 1px solid var(--gray-6);
+
+  background-color: var(--color-background);
+
+  transition: transform var(--transition-normal);
 }
 
 .sidebarOpen {
-  transform: translateX(0);
   z-index: var(--z-dropdown);
+  transform: translateX(0);
 }
 
 .header {
-  display: flex;
   position: sticky;
   top: 0;
-  justify-content: space-between;
+
+  display: flex;
   align-items: center;
-  border-bottom: 1px solid var(--gray-6);
-  background-color: var(--color-surface);
+  justify-content: space-between;
+
   padding: var(--space-4);
+  border-bottom: 1px solid var(--gray-6);
+
+  background-color: var(--color-surface);
 }
 
 .title {
   margin: 0;
-  color: var(--gray-12);
-  font-weight: 600;
   font-size: var(--font-size-4);
+  font-weight: 600;
+  color: var(--gray-12);
 }
 
 .close {
-  transition: color var(--transition-fast);
   cursor: pointer;
+
+  padding: var(--space-1);
   border: none;
   border-radius: var(--radius-2);
-  background: none;
-  padding: var(--space-1);
-  color: var(--gray-11);
+
   font-size: var(--font-size-8);
+  color: var(--gray-11);
+
+  background: none;
+
+  transition: color var(--transition-fast);
 
   &:hover {
-    background-color: var(--gray-4);
     color: var(--gray-12);
+    background-color: var(--gray-4);
   }
 }
 
@@ -68,10 +79,12 @@
 
 .filterLabel {
   display: block;
+
   margin-bottom: var(--space-2);
-  color: var(--gray-12);
-  font-weight: 600;
+
   font-size: var(--font-size-2);
+  font-weight: 600;
+  color: var(--gray-12);
 }
 
 .filterOptions {
@@ -81,7 +94,7 @@
 }
 
 /* Desktop styles */
-@media (min-width: 1024px) {
+@media (width >= 1024px) {
   .sidebar {
     position: relative;
     transform: translateX(0);

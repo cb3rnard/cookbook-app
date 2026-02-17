@@ -5,21 +5,26 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  border-radius: var(--radius-3);
-  background: var(--color-surface);
+
   padding: var(--space-4);
+  border-radius: var(--radius-3);
+
+  background: var(--color-surface);
 }
 
 .preview {
   position: relative;
-  border: 2px dashed var(--gray-7);
-  border-radius: var(--radius-4);
-  background: var(--gray-2);
-  padding: var(--space-1);
+
+  overflow: hidden;
+
   aspect-ratio: 1;
   width: 100%;
   max-width: 140px;
-  overflow: hidden;
+  padding: var(--space-1);
+  border: 2px dashed var(--gray-7);
+  border-radius: var(--radius-4);
+
+  background: var(--gray-2);
 
   .image {
     border-radius: var(--radius-4);
@@ -28,10 +33,12 @@
 
 .placeholder {
   display: flex;
-  justify-content: center;
   align-items: center;
+  justify-content: center;
+
   width: 100%;
   height: 100%;
-  color: var(--gray-11);
+
   font-size: var(--font-size-2);
+  color: var(--gray-11);
 }

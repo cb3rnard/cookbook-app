@@ -1,10 +1,12 @@
 .label,
 form label {
   display: block;
+
   margin-bottom: var(--spacing-xs);
-  color: var(--color-text);
-  font-weight: 600;
+
   font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--color-text);
   text-transform: uppercase;
 }
 
@@ -19,22 +21,23 @@ form label {
 }
 
 .label--required::after {
-  content: " *";
+  content: ' *';
   color: var(--color-danger);
 }
 
 fieldset {
-  border-width: .0625rem;
   border-color: var(--color-border);
+  border-width: 0.0625rem;
   border-radius: var(--border-radius-md);
 }
 
 .input {
   &--unstyled {
-    box-shadow: none;
+    padding: 0;
     border: transparent;
+
     background: none;
     background-color: transparent;
-    padding: 0;
+    box-shadow: none;
   }
 }

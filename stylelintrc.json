@@ -1,0 +1,25 @@
+{
+  "extends": [
+    "stylelint-config-standard",
+    "stylelint-config-css-modules",
+    "stylelint-config-prettier",
+    "stylelint-config-clean-order"
+  ],
+  "plugins": ["stylelint-order", "stylelint-config-clean-order"],
+  "ignoreFiles": ["dist/**", "node_modules/**"],
+  "rules": {
+    "block-no-empty": null,
+    "color-no-invalid-hex": true,
+    "font-family-no-missing-generic-family-keyword": null,
+    "indentation": 2,
+    "order/properties-order": [[], { "severity": "warning" }],
+    "plugin/clean-order": [
+      true,
+      {
+        "border-in-box-model": false,
+        "empty-line-between-groups": false,
+        "severity": "warning"
+      }
+    ]
+  }
+}
