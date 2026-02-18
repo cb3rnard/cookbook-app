@@ -105,6 +105,7 @@ export function ApiProvider({ children }: { children: React.ReactNode }) {
             title: 'En ligne',
             message: "L'application est en ligne.",
             opaque: true,
+            dismissible: true,
           },
           3000,
         );
@@ -115,6 +116,7 @@ export function ApiProvider({ children }: { children: React.ReactNode }) {
           title: 'Hors ligne',
           message: "L'application est hors ligne.",
           opaque: true,
+          dismissible: true,
         });
         break;
       case 'available':
@@ -123,6 +125,7 @@ export function ApiProvider({ children }: { children: React.ReactNode }) {
           title: 'Serveur disponible',
           message: 'Le serveur API est accessible.',
           opaque: true,
+          dismissible: true,
         });
         break;
       case 'unavailable':
@@ -131,6 +134,7 @@ export function ApiProvider({ children }: { children: React.ReactNode }) {
           title: 'Serveur indisponible',
           message: "Le serveur API n'est pas accessible.",
           opaque: true,
+          dismissible: true,
         });
         break;
       case 'error':
@@ -139,6 +143,7 @@ export function ApiProvider({ children }: { children: React.ReactNode }) {
           title: 'Erreur de connexion',
           message: "Une erreur s'est produite lors de la connexion à l'API.",
           opaque: true,
+          dismissible: true,
         });
         break;
       case 'authenticated':
@@ -148,6 +153,7 @@ export function ApiProvider({ children }: { children: React.ReactNode }) {
           title: 'Connecté',
           message: "Vous êtes connecté à l'API.",
           opaque: true,
+          dismissible: true,
         });
         break;
       case 'unauthenticated':
@@ -156,6 +162,7 @@ export function ApiProvider({ children }: { children: React.ReactNode }) {
           title: 'Non authentifié',
           message: "Vous n'êtes pas authentifié.",
           opaque: true,
+          dismissible: true,
         });
         break;
       case 'expired':
@@ -164,6 +171,7 @@ export function ApiProvider({ children }: { children: React.ReactNode }) {
           title: 'Session expirée',
           message: 'Votre session a expiré. Veuillez vous reconnecter.',
           opaque: true,
+          dismissible: true,
         });
         break;
       case 'disconnected':
@@ -172,6 +180,7 @@ export function ApiProvider({ children }: { children: React.ReactNode }) {
           title: 'Déconnexion',
           message: "Vous êtes déconnecté de l'API.",
           opaque: true,
+          dismissible: true,
         });
         break;
     }

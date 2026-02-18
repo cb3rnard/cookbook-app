@@ -23,6 +23,7 @@ export interface CountsModel {
   deleted: EndpointCounts;
   created: EndpointCounts;
   modified: EndpointCounts;
+  empty: boolean;
   hasChanges: boolean;
   loading: boolean;
   error: ErrorInfo | null;
@@ -35,6 +36,7 @@ export const countsModel: CountsModel = {
   deleted: { ...defaultEndpointCounts },
   created: { ...defaultEndpointCounts },
   modified: { ...defaultEndpointCounts },
+  empty: true,
   hasChanges: false,
   loading: false,
   error: null,

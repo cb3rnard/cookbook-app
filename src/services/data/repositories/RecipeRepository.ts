@@ -55,6 +55,14 @@ export class RecipeRepository extends BaseSyncRepository<
     // Préparer l'image (alimente directement entity.imageUuid)
     const imageState = await this._prepareImageForSave(recipe);
 
+    console.log('Saving recipe with image state:', {
+      recipeUuid: recipe.uuid,
+      imageUrl: recipe.imageUrl,
+      hasImage: !!recipe.imageUrl || !!recipe.image,
+      imageState,
+      synced,
+    });
+
     if (synced) {
       // If recipe was synced, save first and mark as dirty
       // It will be marked as synced after saving relations
@@ -125,9 +133,11 @@ export class RecipeRepository extends BaseSyncRepository<
    * @param entity - Entité Recipe à préparer
    * @returns État de l'image (imageUuidBefore et imageHasChanged) pour _saveRecipeImage
    */
-  async _prepareImageForSave(
-    entity: Recipe,
-  ): Promise<{ imageUuidBefore: string; imageHasChanged: boolean }> {
+  async _prepareImageForSave(entity: Recipe): Promise<{
+    imageUuid: string;
+    imageUuidBefore: string;
+    imageHasChanged: boolean;
+  }> {
     let newImageUuid = entity.imageUuid;
     let imageUuidBefore = '';
     let imageHasChanged = false;
@@ -164,6 +174,7 @@ export class RecipeRepository extends BaseSyncRepository<
     }
 
     return {
+      imageUuid: newImageUuid,
       imageUuidBefore,
       imageHasChanged,
     };
@@ -237,17 +248,34 @@ export class RecipeRepository extends BaseSyncRepository<
     },
     isNew: boolean,
   ) {
+    console.log('--- _saveRecipeImage called with:', {
+      recipeUuid: recipe.uuid,
+      imageUrl: recipe.imageUrl,
+      hasImage: !!recipe.imageUrl || !!recipe.image,
+      imageState,
+    });
     const newImageUuid = imageState.imageUuid ?? '';
     const imageUuidBefore = imageState.imageUuidBefore || '';
     const imageRepository = this.repositories.images;
 
     // Case 1 : Image deleted
     if (newImageUuid === '' && imageUuidBefore !== '') {
+      console.log('Deleting old image for recipe', {
+        imageUuidBefore,
+      });
       await imageRepository.delete(imageUuidBefore);
       return;
     }
 
     let newImage: Image | null = null;
+
+    console.log('Saving image for recipe', {
+      imageUrl: recipe.imageUrl,
+      newImageUuid,
+      imageUuidBefore,
+      hasImage: !!newImageUuid,
+      imageHasChanged: imageState.imageHasChanged,
+    });
 
     // Case 2 : New image from URL
     const imageUrl = recipe.imageUrl;
@@ -262,20 +290,24 @@ export class RecipeRepository extends BaseSyncRepository<
     }
     // Case 3 : Image provided directly (upload)
     else if (recipe.image) {
+      console.log('Saving provided image for recipe', recipe.image);
       // Si l'image a un blob, la sauvegarder directement
       if (recipe.image.blob) {
         newImage = new Image(recipe.image);
       }
       // Si l'image vient de l'API (sans blob), ne pas bloquer ici
       // La synchronisation sera tentée lors de l'hydratation
-      else if (recipe.image['@type']) {
-        // Do nothing here, hydration will handle the sync
-        return;
+      else if (recipe.image['@type'] && recipe.image['uuid']) {
+        newImage =
+          (await this.retrieveRemoteImage(recipe.image['uuid'])) ?? null;
       }
+    } else {
+      console.log('No image to save for recipe');
     }
 
     // Sauvegarder la nouvelle image si on en a une
     if (newImage && newImage.blob) {
+      console.log('Saving new image for recipe', newImage);
       await imageRepository.save(newImage);
     }
 
@@ -314,7 +346,7 @@ export class RecipeRepository extends BaseSyncRepository<
    * @param {string} imageUuid - UUID of the image to synchronize
    * @returns {Promise<Image|null>} The synchronized image or null if not found
    */
-  async retrieveRemoteImage(imageUuid: string): Promise<ImageData | null> {
+  async retrieveRemoteImage(imageUuid: string): Promise<Image | null> {
     if (!imageUuid) {
       return null;
     }
@@ -332,7 +364,7 @@ export class RecipeRepository extends BaseSyncRepository<
         // Synchronisation réussie : sauvegarder/mettre à jour l'image
         const imageRepository = this.repositories.images;
         await imageRepository.save(image);
-        return syncResult.data;
+        return image;
       } else if (syncResult?.status === 'not_found') {
         // L'image n'existe pas sur le serveur
         console.warn(`Image ${imageUuid} not found on server`);
@@ -352,7 +384,8 @@ export class RecipeRepository extends BaseSyncRepository<
    * @param {boolean} sync - Tenter une synchronisation si l'image est manquante et canSync est activé
    * @returns {Promise<Image|null>} L'image ou null
    */
-  async getImage(imageUuid = null, sync = false) {
+  async getImage(imageUuid = '', sync = false): Promise<Image | null> {
+    console.log(`Getting image ${imageUuid} with sync=${sync}`);
     if (!imageUuid) {
       return null;
     }
@@ -366,6 +399,9 @@ export class RecipeRepository extends BaseSyncRepository<
 
       // Cas 2 : Image existe mais sans blob OU n'existe pas
       // Tenter une synchronisation si demandée et autorisée
+      console.log(
+        `Image ${imageUuid} not found locally or has no blob. Sync requested: ${sync}, canSync: ${this.canSync}`,
+      );
       if (sync && this.canSync) {
         return this.retrieveRemoteImage(imageUuid);
       }

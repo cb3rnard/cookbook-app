@@ -39,18 +39,18 @@ export function PWABadge() {
             <Flex direction="column" gap="2" align="end">
               <Text as="p">
                 {offlineReady
-                  ? 'App ready to work offline'
-                  : 'New content available, click on reload button to update.'}
+                  ? 'Application prête à fonctionner hors ligne.'
+                  : "Une nouvelle version de l'application est disponible."}
               </Text>
               {needRefresh && (
                 <Button
                   className="PWABadge-toast-button"
                   onClick={() => updateServiceWorker(true)}
                 >
-                  Reload
+                  Mettre à jour
                 </Button>
               )}
-              <Button onClick={() => close()}>Close</Button>
+              <Button onClick={() => close()}>Fermer</Button>
             </Flex>
           </Notice>
         </Box>

@@ -395,6 +395,11 @@ export class DataService {
           counts.deleted.types > 0;
       }
 
+      counts.empty =
+        counts.all.recipes === 0 &&
+        counts.all.ingredients === 0 &&
+        counts.all.types === 0;
+
       this.dataStore.setState({
         localCounts: {
           ...counts,
@@ -491,6 +496,11 @@ export class DataService {
         changes += counts.deleted[endpoint];
       }
       counts.hasChanges = changes > 0;
+
+      counts.empty =
+        counts.all.recipes === 0 &&
+        counts.all.ingredients === 0 &&
+        counts.all.types === 0;
 
       this.dataStore.setState({
         remoteCounts: {

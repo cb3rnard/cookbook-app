@@ -8,7 +8,12 @@ import {
   Switch,
   Text,
 } from '@radix-ui/themes';
+import { useApi } from '@src/contexts/ApiContext';
+import { useData } from '@src/contexts/DataContext';
+import { useRecipes } from '@src/contexts/RecipesContext';
+import { useSync } from '@src/contexts/SyncContext';
 import { EventBus } from '@src/services/utils/EventBus';
+import { getErrorMessage } from '@src/services/utils/GlobalUtils';
 import { useEffect, useState } from 'react';
 import { config } from '../../config/config';
 import { ConfigService } from '../../services/ConfigService';
@@ -22,12 +27,22 @@ interface DebugStates {
 }
 
 export function DevOptionsPanel() {
+  const { connection } = useApi();
+  const { authenticated } = connection;
+  const { syncState } = useSync();
+  const { syncing } = syncState;
   const [debugStates, setDebugStates] = useState<DebugStates>({
     global: false,
     showDebugControls: false,
   });
   const [activeContexts, setActiveContexts] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [cleaning, setCleaning] = useState(false);
+  const { localCounts, remoteCounts, cleanDeletedSyncedEntities } = useData();
+  const { refreshRecipes } = useRecipes();
+
+  const needsSync = localCounts.hasChanges || remoteCounts.hasChanges;
+  const canClean = authenticated && !needsSync && !syncing && !cleaning;
 
   // Contextes de debug disponibles
   const availableContexts = [
@@ -143,6 +158,39 @@ export function DevOptionsPanel() {
 
   const handleClearConsole = () => {
     console.clear();
+  };
+
+  const handleCleanDeleted = async () => {
+    if (!canClean) return;
+
+    const confirmed = window.confirm(
+      'Voulez-vous vraiment supprimer définitivement toutes les entités supprimées ?\n\n' +
+        'Cette opération est irréversible et supprimera :\n' +
+        '- Les entités supprimées localement\n' +
+        '- Les entités supprimées côté serveur\n\n' +
+        'La synchronisation doit être à jour pour effectuer cette opération.',
+    );
+
+    if (!confirmed) return;
+
+    setCleaning(true);
+    try {
+      const result = await cleanDeletedSyncedEntities();
+      await refreshRecipes();
+      alert(
+        `Nettoyage terminé avec succès !\n\n` +
+          `${result.totalDeleted} entité(s) supprimée(s) définitivement.`,
+      );
+    } catch (error) {
+      const errorMessage = getErrorMessage(error);
+      alert(
+        `Erreur lors du nettoyage :\n\n${errorMessage}\n\n` +
+          `Assurez-vous que la synchronisation est à jour avant de réessayer.`,
+      );
+      console.error('Clean deleted entities error:', error);
+    } finally {
+      setCleaning(false);
+    }
   };
 
   const deleteAllData = async () => {
@@ -290,6 +338,36 @@ export function DevOptionsPanel() {
             </Button>
           </Flex>
         </Card>
+        {/* Nettoyage des entités supprimées */}
+        {authenticated && (
+          <Box mt="6">
+            <Heading as="h3" size="3" mb="2">
+              Nettoyage des entités supprimées
+            </Heading>
+            <Flex direction="column" gap="2">
+              <Text as="div" size="2" color="gray">
+                Supprime définitivement les entités supprimées et synchronisées.
+                Cette opération nécessite que la synchronisation soit à jour.
+              </Text>
+              <Button
+                onClick={handleCleanDeleted}
+                variant="surface"
+                color="red"
+                disabled={!canClean}
+              >
+                {cleaning
+                  ? 'Nettoyage en cours...'
+                  : 'Nettoyer les entités supprimées'}
+              </Button>
+              {!canClean && needsSync && (
+                <Text as="div" size="1" color="orange">
+                  ⚠️ Synchronisez d&apos;abord vos données pour activer le
+                  nettoyage
+                </Text>
+              )}
+            </Flex>
+          </Box>
+        )}
         <Box>
           <Heading size="4" mt="6" mb="2" color="red">
             Reset

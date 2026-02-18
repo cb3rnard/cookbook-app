@@ -5,7 +5,6 @@ import { useConfig } from '@src/contexts/ConfigContext';
 import { useData } from '@src/contexts/DataContext';
 import { useRecipes } from '@src/contexts/RecipesContext';
 import { useSync } from '@src/contexts/SyncContext';
-import { getErrorMessage } from '@src/services/utils/GlobalUtils';
 import { useMemo, useState } from 'react';
 import { config, CONSTANTS_SYNC } from '../../config/config';
 import { SyncCountBoxes } from '../sync/SyncCountBoxes';
@@ -16,19 +15,13 @@ export function SyncOptionsPanel() {
   const { authenticated } = connection;
   const { syncState, fullSync, incrementalSync, clearOperation } = useSync();
   const { syncing } = syncState;
-  const {
-    localCounts,
-    remoteCounts,
-    fetchRemoteCounts,
-    cleanDeletedSyncedEntities,
-  } = useData();
+  const { localCounts, remoteCounts, refreshAllCounts } = useData();
   const { refreshRecipes } = useRecipes();
   const { setConfig } = useConfig();
   const [syncRequested, setSyncRequested] = useState(false);
-  const [cleaning, setCleaning] = useState(false);
 
   const needsSync = localCounts.hasChanges || remoteCounts.hasChanges;
-  const canClean = authenticated && !needsSync && !syncing && !cleaning;
+  const isInitialSync = localCounts.empty || remoteCounts.empty;
 
   const lastSyncDateLocale = useMemo(() => {
     return session.lastSyncDate
@@ -51,39 +44,6 @@ export function SyncOptionsPanel() {
   const handleCloseProgress = () => {
     setSyncRequested(false);
     clearOperation();
-  };
-
-  const handleCleanDeleted = async () => {
-    if (!canClean) return;
-
-    const confirmed = window.confirm(
-      'Voulez-vous vraiment supprimer définitivement toutes les entités supprimées ?\n\n' +
-        'Cette opération est irréversible et supprimera :\n' +
-        '- Les entités supprimées localement\n' +
-        '- Les entités supprimées côté serveur\n\n' +
-        'La synchronisation doit être à jour pour effectuer cette opération.',
-    );
-
-    if (!confirmed) return;
-
-    setCleaning(true);
-    try {
-      const result = await cleanDeletedSyncedEntities();
-      await refreshRecipes();
-      alert(
-        `Nettoyage terminé avec succès !\n\n` +
-          `${result.totalDeleted} entité(s) supprimée(s) définitivement.`,
-      );
-    } catch (error) {
-      const errorMessage = getErrorMessage(error);
-      alert(
-        `Erreur lors du nettoyage :\n\n${errorMessage}\n\n` +
-          `Assurez-vous que la synchronisation est à jour avant de réessayer.`,
-      );
-      console.error('Clean deleted entities error:', error);
-    } finally {
-      setCleaning(false);
-    }
   };
 
   const handleSettingChange = async (
@@ -206,17 +166,17 @@ export function SyncOptionsPanel() {
                   variant="ghost"
                   size="1"
                   onClick={async () => {
-                    await fetchRemoteCounts();
+                    await refreshAllCounts();
                   }}
                   disabled={syncing}
                 >
-                  Actualiser les données distantes
+                  Actualiser les données
                 </Button>
               </Flex>
             )}
             {authenticated && (
               <Flex gap="2" wrap="wrap">
-                {needsSync && (
+                {needsSync && !isInitialSync && (
                   <Button
                     className="settings__sync button"
                     onClick={handleIncrementalSync}
@@ -241,36 +201,6 @@ export function SyncOptionsPanel() {
         )}
       </Flex>
       {session.active && <DelaySettings />}
-      {/* Nettoyage des entités supprimées */}
-      {authenticated && (
-        <Box mt="6">
-          <Heading as="h3" size="3" mb="2">
-            Nettoyage des entités supprimées
-          </Heading>
-          <Flex direction="column" gap="2">
-            <Text as="div" size="2" color="gray">
-              Supprime définitivement les entités supprimées et synchronisées.
-              Cette opération nécessite que la synchronisation soit à jour.
-            </Text>
-            <Button
-              onClick={handleCleanDeleted}
-              variant="surface"
-              color="red"
-              disabled={!canClean}
-            >
-              {cleaning
-                ? 'Nettoyage en cours...'
-                : 'Nettoyer les entités supprimées'}
-            </Button>
-            {!canClean && needsSync && (
-              <Text as="div" size="1" color="orange">
-                ⚠️ Synchronisez d&apos;abord vos données pour activer le
-                nettoyage
-              </Text>
-            )}
-          </Flex>
-        </Box>
-      )}
     </Flex>
   );
 }

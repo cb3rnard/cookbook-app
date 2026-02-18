@@ -12,7 +12,7 @@ import { Notice } from '../ui/Notice';
 const StickyContainer = styled(Flex)`
   position: sticky;
   bottom: 0;
-  background: white;
+  background: var(--color-background);
   padding: var(--space-6);
   border-top: 1px solid var(--gray-6);
 `;

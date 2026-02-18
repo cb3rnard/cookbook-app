@@ -13,6 +13,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, __dirname, '');
   const devHost = env.VITE_DEV_HOST || '0.0.0.0';
   const devPort = Number(env.VITE_DEV_PORT || 5173);
+  const appBase = '/app/dist/';
   const devPublicUrl = env.VITE_DEV_PUBLIC_URL || '';
   const devPublicHttps =
     env.VITE_DEV_PUBLIC_HTTPS === 'true' || devPublicUrl.startsWith('https://');
@@ -39,8 +40,7 @@ export default defineConfig(({ mode }) => {
       : undefined;
 
   return {
-    base: '',
-    // base: '/app/dist',
+    base: appBase,
     server: {
       host: devHost,
       port: devPort,
@@ -93,8 +93,8 @@ export default defineConfig(({ mode }) => {
 
         manifest: {
           name: 'cookbook',
-          scope: '/app/dist',
-          start_url: '/app/dist',
+          scope: appBase,
+          start_url: appBase,
           short_name: 'cookbook',
           description: 'cookbook',
           theme_color: '#ffffff',

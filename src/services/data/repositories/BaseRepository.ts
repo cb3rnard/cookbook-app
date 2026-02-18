@@ -144,15 +144,6 @@ export class BaseRepository<
   }
 
   async save(entity: TEntity, skipValidation = false): Promise<void> {
-    // Déterminer si c'est une création ou une mise à jour
-    const isUpdate = !!entity.uuid;
-
-    if (isUpdate) {
-      // C'est une mise à jour → déléguer à update()
-      await this.update(entity, skipValidation);
-      return;
-    }
-
     // Création → validation complète
     if (!skipValidation) {
       await entity.validate({}, false);

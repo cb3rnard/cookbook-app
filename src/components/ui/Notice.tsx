@@ -1,5 +1,6 @@
 import {
   CheckCircledIcon,
+  Cross1Icon,
   CrossCircledIcon,
   ExclamationTriangleIcon,
 } from '@radix-ui/react-icons';
@@ -84,28 +85,32 @@ export function Notice({
         size={size}
         highContrast={highContrast}
       >
-        {dismissible && (
-          <Flex justify="end">
-            <Button
-              variant="ghost"
-              size="1"
-              onClick={() => {
-                setDismissed(true);
-                onDismiss?.();
-              }}
-              style={{ marginLeft: 'auto' }}
-            >
-              ×
-            </Button>
-          </Flex>
-        )}
+        {(title || IconComponentFinal || dismissible) && (
+          <Flex align="center" gap="2" justify={'between'}>
+            {(title || IconComponentFinal) && (
+              <Flex align="center" gap="2">
+                {IconComponentFinal && <IconComponentFinal />}
+                {(title || IconComponentFinal) && (
+                  <Heading size="2">
+                    {title && <strong>{title}</strong>}
+                  </Heading>
+                )}
+              </Flex>
+            )}
 
-        {(title || IconComponentFinal) && (
-          <Flex asChild align="center" gap="2">
-            <Heading size="2">
-              {IconComponentFinal && <IconComponentFinal />}
-              {title && <strong>{title}</strong>}
-            </Heading>
+            {dismissible && (
+              <Button
+                variant="ghost"
+                size="1"
+                onClick={() => {
+                  setDismissed(true);
+                  onDismiss?.();
+                }}
+                style={{ marginLeft: 'auto' }}
+              >
+                <Cross1Icon />
+              </Button>
+            )}
           </Flex>
         )}
 

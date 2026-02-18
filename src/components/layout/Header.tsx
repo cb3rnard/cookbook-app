@@ -77,7 +77,7 @@ export function Header({
                 </Flex>
               </nav>
             </Box>
-            <InstallButton size="3" color="green" variant="surface" />
+            <InstallButton size="2" color="blue" variant="surface" />
           </Flex>
         </Flex>
 

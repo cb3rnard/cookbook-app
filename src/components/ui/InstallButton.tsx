@@ -1,3 +1,4 @@
+import { BookmarkFilledIcon } from '@radix-ui/react-icons';
 import { Button, Popover, Text } from '@radix-ui/themes';
 import { buttonPropDefs } from '@radix-ui/themes/src/components/button.props.tsx';
 import { usePwaInstall } from '../../hooks/usePwaInstall';
@@ -40,7 +41,8 @@ export function InstallButton({
     </Popover.Root>
   ) : canInstall ? (
     <Button onClick={promptInstall} size={size} color={color} variant={variant}>
-      Installer l’application
+      <BookmarkFilledIcon />
+      Installer
     </Button>
   ) : null;
 }

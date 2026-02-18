@@ -117,7 +117,7 @@ export function RecipeCard({
                     <UpdateIcon />
                   </Tag>
                 )}
-                {recipe.tested && (
+                {!!recipe.tested && (
                   <Tag color="green" rounded={true} title="Recette testée">
                     <CheckIcon />
                   </Tag>
@@ -171,7 +171,7 @@ export function RecipeCard({
               )}
             </Flex>
           )}
-          {recipe.ingredients && recipe.ingredients.length > 0 && (
+          {/* {recipe.ingredients && recipe.ingredients.length > 0 && (
             <div className={styles.ingredients}>
               <Heading as="h4" size="2">
                 Ingrédients
@@ -189,7 +189,7 @@ export function RecipeCard({
                 )}
               </ul>
             </div>
-          )}
+          )} */}
           {recipe.types && recipe.types.length > 0 && (
             <Flex mt="auto" mb="2" gap="2" wrap="wrap">
               {recipe.types.map((type, index) => (

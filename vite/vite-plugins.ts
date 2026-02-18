@@ -36,6 +36,15 @@ export function generateTwigTemplate(): Plugin {
 }
 
 function convertHtmlToTwig(html: string): string {
+  const ensureDistPrefix = (assetPath: string): string => {
+    if (!assetPath) return assetPath;
+    const normalized = assetPath.replace(/^\.\//, '').replace(/^\//, '');
+    if (normalized.startsWith('app/dist/')) {
+      return normalized;
+    }
+    return `app/dist/${normalized}`;
+  };
+
   // 🚀 Extraire seulement le contenu du body
   const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
   const bodyContent = bodyMatch ? bodyMatch[1].trim() : '<div id="root"></div>';
@@ -62,7 +71,7 @@ function convertHtmlToTwig(html: string): string {
       let scriptTag = `\t<script`;
       if (typeMatch) scriptTag += ` type="${typeMatch}"`;
       if (crossoriginMatch) scriptTag += ` crossorigin`;
-      scriptTag += ` src="{{ asset('${srcMatch}') }}"></script>`;
+      scriptTag += ` src="{{ asset('${ensureDistPrefix(srcMatch)}') }}"></script>`;
 
       allElements.push(scriptTag);
     }
@@ -76,7 +85,7 @@ function convertHtmlToTwig(html: string): string {
 
       let linkTag = `\t<link rel="stylesheet"`;
       if (crossoriginMatch) linkTag += ` crossorigin`;
-      linkTag += ` href="{{ asset('${hrefMatch}') }}">`;
+      linkTag += ` href="{{ asset('${ensureDistPrefix(hrefMatch)}') }}">`;
 
       allElements.push(linkTag);
     }
@@ -103,7 +112,7 @@ function convertHtmlToTwig(html: string): string {
     const hrefMatch = manifestMatch[0].match(/href="([^"]*)"/)?.[1];
     if (hrefMatch) {
       allElements.push(
-        `\t<link rel="manifest" href="{{ asset('${hrefMatch}') }}">`,
+        `\t<link rel="manifest" href="{{ asset('${ensureDistPrefix(hrefMatch)}') }}">`,
       );
     }
   }
@@ -115,7 +124,7 @@ function convertHtmlToTwig(html: string): string {
       const sizesMatch = favicon.match(/sizes="([^"]*)"/)?.[1];
       const typeMatch = favicon.match(/type="([^"]*)"/)?.[1];
 
-      let faviconTag = `\t<link rel="icon" href="{{ asset('${hrefMatch}') }}"`;
+      let faviconTag = `\t<link rel="icon" href="{{ asset('${ensureDistPrefix(hrefMatch)}') }}"`;
       if (sizesMatch) faviconTag += ` sizes="${sizesMatch}"`;
       if (typeMatch) faviconTag += ` type="${typeMatch}"`;
       faviconTag += '>';
@@ -129,7 +138,7 @@ function convertHtmlToTwig(html: string): string {
     const hrefMatch = appleTouchMatch[0].match(/href="([^"]*)"/)?.[1];
     if (hrefMatch) {
       allElements.push(
-        `\t<link rel="apple-touch-icon" href="{{ asset('${hrefMatch}') }}">`,
+        `\t<link rel="apple-touch-icon" href="{{ asset('${ensureDistPrefix(hrefMatch)}') }}">`,
       );
     }
   }
