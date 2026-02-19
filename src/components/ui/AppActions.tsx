@@ -19,7 +19,6 @@ export function AppActions() {
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      console.log('Clicked outside:', event.target);
       if (
         !(event.target as HTMLElement)?.closest('.app__actions-create-options')
       ) {

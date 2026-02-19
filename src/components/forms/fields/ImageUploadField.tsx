@@ -45,7 +45,6 @@ export function ImageUploadField({
   const handleFileSelect = async (
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
-    console.log('File selected');
     const files = event.target.files;
 
     if (!files || files.length === 0) {

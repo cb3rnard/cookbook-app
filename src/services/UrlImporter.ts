@@ -99,11 +99,10 @@ export class UrlImporter {
       } else if (Array.isArray(schema.image) && schema.image.length > 0) {
         if (typeof schema.image[0] === 'string') {
           newRecipe.imageUrl = schema.image[0];
-        } else if (
-          typeof schema.image[0] === 'object' &&
-          schema.image[0].contentUrl
-        ) {
-          newRecipe.imageUrl = schema.image[0].contentUrl;
+        } else if (typeof schema.image[0] === 'object') {
+          newRecipe.imageUrl =
+            // Check both contentUrl and url properties
+            schema.image[0].contentUrl || schema.image[0].url || '';
         }
       } else if (typeof schema.image === 'object' && schema.image.url) {
         newRecipe.imageUrl = schema.image.url;
@@ -111,6 +110,8 @@ export class UrlImporter {
         newRecipe.imageUrl = schema.image.contentUrl;
       }
     }
+
+    console.log('Mapped Recipe:', newRecipe);
 
     return newRecipe;
   }

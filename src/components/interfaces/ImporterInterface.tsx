@@ -53,7 +53,6 @@ export function ImporterInterface() {
     setRecipesData((prevData) => {
       const newData = [...prevData];
       newData[index] = savedRecipe;
-      console.log('Updated recipe data at index', index, newData[index]);
       return newData;
     });
     setEditedIndex(0);

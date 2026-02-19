@@ -28,10 +28,6 @@ export class RecipeStore extends BaseStore<RecipesState> {
     // Mise à jour optimiste quand une recette est sauvegardée (données brutes du stockage)
     eventBus.on('entity:saved', ({ endpoint, entity }) => {
       if (endpoint === 'recipes' && entity?.uuid) {
-        console.log('RecipeStore received entity:saved event', {
-          endpoint,
-          entity,
-        });
         this._state.recipes.map((r) => (r.uuid === entity.uuid ? entity : r));
       }
     });
@@ -39,10 +35,6 @@ export class RecipeStore extends BaseStore<RecipesState> {
     // Mise à jour optimiste quand une recette est mise à jour (données brutes du stockage)
     eventBus.on('entity:updated', ({ endpoint, entityData }) => {
       if (endpoint === 'recipes' && entityData?.uuid) {
-        console.log('RecipeStore received entity:updated event', {
-          endpoint,
-          entityData,
-        });
         this.updateRecipeFromPartialData(
           entityData as Partial<RecipeData> & { uuid: string },
         );
@@ -52,10 +44,6 @@ export class RecipeStore extends BaseStore<RecipesState> {
     // Mise à jour avec relations complètes (depuis RecipeRepository)
     eventBus.on('recipe:savedWithRelations', ({ recipe, isNew }) => {
       if (recipe?.uuid) {
-        console.log('RecipeStore received recipe:savedWithRelations event', {
-          recipe,
-          isNew,
-        });
         if (isNew) {
           // Nouvelle recette : l'ajouter au début
           this.addRecipe(recipe);
@@ -68,9 +56,6 @@ export class RecipeStore extends BaseStore<RecipesState> {
 
     // Mise à jour avec relations complètes (depuis RecipeRepository)
     eventBus.on('recipe:updatedWithRelations', ({ recipe }) => {
-      console.log('RecipeStore received recipe:updatedWithRelations event', {
-        recipe,
-      });
       if (recipe?.uuid) {
         this.updateRecipeEntity(recipe);
       }
@@ -85,11 +70,6 @@ export class RecipeStore extends BaseStore<RecipesState> {
 
     // Synchronisation complète
     eventBus.on('entity:synced', ({ endpoint, uuid, lastSyncDate }) => {
-      console.log('RecipeStore received entity:synced event', {
-        endpoint,
-        uuid,
-        lastSyncDate,
-      });
       if (endpoint === 'recipes' && uuid) {
         const existingRecipe = this.state.recipes.find((r) => r.uuid === uuid);
         if (existingRecipe) {

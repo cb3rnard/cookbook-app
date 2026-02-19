@@ -14,6 +14,7 @@ export interface RecipeImageDisplayProps {
   imageUuid?: string;
   recipeUuid?: string;
   image?: ImageData | null;
+  imageUrl?: string;
   isCover?: boolean;
   width?: number | string;
   height?: number | string;
@@ -33,6 +34,7 @@ export function RecipeImageDisplay({
   imageUuid = '',
   recipeUuid = '',
   image = null,
+  imageUrl = '',
   alt,
   className = '',
   imageClassName = '',
@@ -116,10 +118,11 @@ export function RecipeImageDisplay({
   };
 
   // Si l'image existe et a un blob, affichage normal
-  if (currentImage?.blob) {
+  if (currentImage?.blob || imageUrl) {
     return (
       <ImageDisplay
         image={currentImage}
+        imageUrl={imageUrl}
         alt={alt}
         className={className}
         imageClassName={imageClassName}

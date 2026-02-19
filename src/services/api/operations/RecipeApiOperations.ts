@@ -49,7 +49,6 @@ export class RecipeApiOperations extends ApiOperations {
    * @returns {Promise<Object>} Résultat de l'upload
    */
   async uploadRecipeImage(recipeUuid: string, formData: FormData) {
-    console.log(`Uploading image for recipe ${recipeUuid}`);
     const endpoint = this.getUuidEndpoint('recipeImage', recipeUuid);
     const context = 'uploadImage';
 

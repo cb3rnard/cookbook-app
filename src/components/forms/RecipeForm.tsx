@@ -166,9 +166,8 @@ export const RecipeForm = ({
 
   // Pre-save hook to filter empty ingredients
   const handlePreSave = async (entity: Recipe) => {
-    const cleaned = entity.clone();
-    cleaned.ingredients = cleaned.getValidIngredients();
-    return cleaned;
+    entity.ingredients = entity.getValidIngredients();
+    return entity;
   };
 
   const handleSave = async (savedEntity: Recipe) => {

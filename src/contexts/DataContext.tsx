@@ -232,17 +232,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
         // Récupérer toutes les entités supprimées (dateDeleted != null)
         const deletedEntities = await repository.getDeleted();
-        console.log(
-          `Found ${deletedEntities.length} locally deleted entities for ${endpoint}`,
-        );
 
         // Supprimer en dur
         for (const entity of deletedEntities) {
           await repository.delete(entity.uuid, '', true);
           totalDeleted++;
         }
-
-        console.log(`Cleaned ${deletedEntities.length} deleted ${endpoint}`);
       }
 
       // 2. Supprimer les entités locales non modifiées mais supprimées côté API

@@ -350,7 +350,6 @@ export class DataService {
   }
 
   async refreshLocalCounts() {
-    console.log('Refreshing local counts');
     DebugService.log('api', 'DataService: Refreshing local counts');
 
     try {

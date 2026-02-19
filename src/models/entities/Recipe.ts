@@ -34,7 +34,7 @@ export class Recipe extends BaseSyncEntity {
     super(data, asUpdate);
 
     this._name = data.name || '';
-    this._tested = data.tested || 0;
+    this._tested = data.tested === undefined ? 1 : data.tested;
     this._favorite = data.favorite || 0;
     this._description = data.description || '';
     this._steps = data.steps || [];

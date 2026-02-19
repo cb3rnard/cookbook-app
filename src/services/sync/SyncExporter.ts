@@ -385,7 +385,6 @@ export class SyncExporter {
     // From syncedEntities map this.syncedEntities
     if (this.syncedEntities.size === 0) return;
     for (const [uuid, dateReceived] of this.syncedEntities.entries()) {
-      console.log(`SyncExporter: updating sync date for ${endpoint} ${uuid}`);
       await repository.synced(uuid, dateReceived);
       DebugService.log(
         'sync',

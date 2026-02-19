@@ -139,6 +139,7 @@ export function RecipeView({
                     imageUuid={recipe.imageUuid || ''}
                     recipeUuid={recipe.uuid || ''}
                     image={recipe.image || null}
+                    imageUrl={recipe.imageUrl || ''}
                     alt={recipe.name}
                     className={styles.image}
                     imageClassName={styles.image}

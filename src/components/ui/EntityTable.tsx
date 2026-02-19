@@ -94,7 +94,6 @@ export function EntityTable<TEndpoint extends Endpoint = Endpoint>({
       const entity = entitiesList.find((e) => e.uuid === entityUuid);
       if (!entity) return;
       await repository.restore(entity as any);
-      console.log(`Entity ${entity.uuid} restored successfully.`);
     } catch (error) {
       console.error('Failed to restore entity:', error);
     }

@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import styles from './ImageDisplay.module.css';
 
 export interface ImageDisplayProps {
-  image?: Image | ImageData;
+  image?: Image | ImageData | null;
   imageUrl?: string;
   alt?: string;
   className?: string;
@@ -28,6 +28,8 @@ export function ImageDisplay({
   const [displayImageUrl, setDisplayImageUrl] = useState(imageUrl);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+
+  console.log('ImageDisplay Props:', { image, imageUrl, alt, width, height });
 
   className = `${styles.container} ${className}`;
   imageClassName = `${styles.image} ${imageClassName || (isCover ? 'image--cover' : '')}`;

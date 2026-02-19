@@ -312,7 +312,6 @@ export class BaseSyncRepository<
       }
       // Delete from table if no API session or hard delete
       if (hardDelete || !this.connectionStore.hasActiveSession) {
-        console.log(`Hard deleting entity ${entity.uuid} from local database.`);
         await this.table.delete(entity.uuid);
       } else {
         // Mark as deleted for sync
@@ -331,9 +330,6 @@ export class BaseSyncRepository<
   }
 
   async restore(entity: TEntity | string, synced = ''): Promise<void> {
-    console.log(
-      `Restoring entity ${typeof entity === 'string' ? entity : entity.uuid} from deleted state.`,
-    );
     if (typeof entity === 'string') {
       entity = (await this.constructEntity(
         { uuid: entity, dateDeleted: '' } as TEntityData,
