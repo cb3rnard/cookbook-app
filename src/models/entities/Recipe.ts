@@ -29,6 +29,7 @@ export class Recipe extends BaseSyncEntity {
   private _ingredients: RecipeIngredientData[];
   private _types: RecipeTypeData[];
   private _notes: NoteData[];
+  private _isOwn: number;
 
   constructor(data: Partial<RecipeData> = {}, asUpdate: boolean = false) {
     super(data, asUpdate);
@@ -49,8 +50,16 @@ export class Recipe extends BaseSyncEntity {
     this._imageUrl = data.imageUrl || '';
     this._image = data.image || null;
     this._ingredients = data.ingredients || [];
+    this._ingredients.forEach((ing) => {
+      if (ing.quantity !== undefined) {
+        ing.quantity = parseFloat(String(ing.quantity)) || 0;
+      } else {
+        ing.quantity = 0;
+      }
+    });
     this._types = data.types || [];
     this._notes = data.notes || [];
+    this._isOwn = data.isOwn || 1;
   }
 
   // Getters
@@ -116,6 +125,10 @@ export class Recipe extends BaseSyncEntity {
 
   get notes(): NoteData[] {
     return this._notes;
+  }
+
+  get isOwn(): number {
+    return this._isOwn;
   }
 
   // Setters
@@ -186,6 +199,13 @@ export class Recipe extends BaseSyncEntity {
 
   set ingredients(value: RecipeIngredientData[]) {
     this._ingredients = value;
+    this._ingredients.forEach((ing) => {
+      if (ing.quantity !== undefined) {
+        ing.quantity = parseFloat(String(ing.quantity)) || 0;
+      } else {
+        ing.quantity = 0;
+      }
+    });
     this.markChanged('ingredients');
   }
 
@@ -197,6 +217,11 @@ export class Recipe extends BaseSyncEntity {
   set notes(value: NoteData[]) {
     this._notes = value;
     this.markChanged('notes');
+  }
+
+  set isOwn(value: number) {
+    this._isOwn = value;
+    this.markChanged('isOwn');
   }
 
   get totalTime(): number {
@@ -319,6 +344,7 @@ export class Recipe extends BaseSyncEntity {
       portions: String(this.portions),
       difficulty: this.difficulty,
       imageUuid: this.imageUuid,
+      isOwn: this.isOwn,
     };
   }
 
@@ -341,7 +367,7 @@ export class Recipe extends BaseSyncEntity {
   toApi(): RecipeApi {
     const recipeDependencies = {
       ingredients: this.ingredients.map((ing) => ({
-        ingredient: ing.ingredient ? ing.ingredient.toApi() : undefined,
+        // ingredient: ing.ingredient ? ing.ingredient.toApi() : undefined,
         ingredientUuid: ing.ingredientUuid,
         quantity: ing.quantity,
         unit: ing.unit,
